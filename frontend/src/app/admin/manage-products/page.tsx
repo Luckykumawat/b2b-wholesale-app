@@ -494,7 +494,7 @@ export default function AdminProducts() {
 
                     {/* Image */}
                     <div className="aspect-square bg-white flex items-center justify-center relative p-6">
-                      {product.images && product.images[0] ? (
+                      {product.images && product.images[0] && product.images[0].trim() !== '' ? (
                         <img src={product.images[0]} alt={product.name} className="w-full h-full object-contain mix-blend-multiply transition-transform group-hover:scale-105" />
                       ) : (
                         <ImageIcon className="w-12 h-12 text-gray-300" />

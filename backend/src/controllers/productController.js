@@ -96,15 +96,15 @@ const createProduct = async (req, res) => {
       sku: finalSku,
       description,
       basePrice,
-      dimensions: dimensions ? JSON.parse(dimensions) : {},
+      dimensions: (dimensions && typeof dimensions === 'string') ? JSON.parse(dimensions) : (dimensions || {}),
       material,
       finish,
       cbm,
       collectionName,
       stock,
       category,
-      tags: tags ? JSON.parse(tags) : [],
-      images
+      tags: (tags && typeof tags === 'string') ? JSON.parse(tags) : (tags || []),
+      images: images.filter(img => img && img.trim() !== '')
     });
 
     const createdProduct = await product.save();
@@ -122,33 +122,57 @@ const updateProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
 
-    const updates = { ...req.body };
+    console.log('Update Product Request Body:', req.body);
+    console.log('Update Product Files:', req.files ? req.files.length : 0);
     
-    // Parse dimensions if it's sent as a string from FormData
-    if (updates.dimensions && typeof updates.dimensions === 'string') {
+    const { images, remainingImages, dimensions, tags, ...otherFields } = req.body;
+    
+    // Assign fields that are directly strings/numbers
+    Object.assign(product, otherFields);
+    
+    // Handle dimensions
+    if (dimensions) {
       try {
-        updates.dimensions = JSON.parse(updates.dimensions);
+        product.dimensions = typeof dimensions === 'string' ? JSON.parse(dimensions) : dimensions;
       } catch (err) {
         console.error('Error parsing dimensions', err);
       }
     }
     
-    // Parse tags similarly
-    if (updates.tags && typeof updates.tags === 'string') {
+    // Handle tags
+    if (tags) {
       try {
-        updates.tags = JSON.parse(updates.tags);
+        product.tags = typeof tags === 'string' ? JSON.parse(tags) : tags;
       } catch (err) {
         console.error('Error parsing tags', err);
       }
     }
 
-    Object.assign(product, updates);
+    // Handle image updates (remaining images)
+    // We check both 'remainingImages' and 'images' to be compatible with old/new frontend
+    const imagesToKeep = remainingImages || images;
+    if (imagesToKeep !== undefined) {
+      try {
+        const parsedImages = typeof imagesToKeep === 'string' ? JSON.parse(imagesToKeep) : imagesToKeep;
+        if (Array.isArray(parsedImages)) {
+          // Update product.images with the ones we want to keep
+          product.images = parsedImages.filter(img => img && typeof img === 'string' && img.trim() !== '');
+        }
+      } catch (err) {
+        console.error('Error parsing remaining images', err);
+      }
+    }
 
+    // Handle adding new files
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map(file => req.protocol + '://' + req.get('host') + '/' + file.path.replace(/\\/g, '/'));
       product.images = [...product.images, ...newImages];
     }
 
+    // Ensure all image URLs are clean
+    product.images = product.images.filter(img => img && typeof img === 'string' && img.trim() !== '');
+
+    console.log('Final product images before save:', product.images);
     const updatedProduct = await product.save();
     res.json(updatedProduct);
   } catch (error) {

@@ -41,6 +41,7 @@ export default function ProductDetailsPage() {
         dimW: data.dimensions?.width || '',
         dimH: data.dimensions?.height || '',
         dimD: data.dimensions?.depth || '',
+        images: data.images || []
       });
     } catch (error) {
       console.error('Error fetching product details:', error);
@@ -142,9 +143,12 @@ export default function ProductDetailsPage() {
       const dimensions = { width: Number(editForm.dimW), height: Number(editForm.dimH), depth: Number(editForm.dimD) };
       formData.append('dimensions', JSON.stringify(dimensions));
       
+      // Send remaining existing images - using unique field name to avoid Multer conflict
+      formData.append('remainingImages', JSON.stringify(editForm.images || []));
+      
       if (files && files.length > 0) {
         for (let i = 0; i < files.length; i++) {
-          formData.append('images', files[i]);
+          formData.append('images', files[i]); // files still use 'images'
         }
       }
 
@@ -235,7 +239,14 @@ export default function ProductDetailsPage() {
          <div className="w-full lg:w-[45%] flex flex-col relative group">
             <div className="aspect-square bg-[#F9FAFB] flex items-center justify-center relative border border-gray-100 rounded-xl overflow-hidden p-4">
                {activeImage ? (
-                 <img src={activeImage} className="w-full h-full object-contain mix-blend-multiply" />
+                 <img 
+                   src={activeImage} 
+                   className="w-full h-full object-contain mix-blend-multiply" 
+                   onError={(e) => {
+                     (e.target as HTMLImageElement).src = '/placeholder-image.png'; // Fallback if available
+                     (e.target as HTMLImageElement).onerror = null; // Prevent infinite loop
+                   }}
+                 />
                ) : (
                  <ImageIcon className="w-20 h-20 text-gray-300" />
                )}
@@ -246,9 +257,16 @@ export default function ProductDetailsPage() {
             </button>
             
             <div className="flex gap-2 mt-4 overflow-x-auto pb-2 custom-scrollbar">
-               {product.images?.map((img: string, idx: number) => (
+               {product.images?.filter((img: string) => img).map((img: string, idx: number) => (
                  <div key={idx} onClick={() => setActiveImage(img)} className={`w-[70px] h-[70px] border bg-white flex items-center justify-center flex-shrink-0 cursor-pointer transition-colors rounded-lg overflow-hidden ${activeImage === img ? 'border-[#1B6F53] ring-2 ring-[#1B6F53]/20' : 'border-gray-200 hover:border-gray-400'}`}>
-                   <img src={img} className="w-full h-full object-contain mix-blend-multiply" />
+                   <img 
+                     src={img} 
+                     className="w-full h-full object-contain mix-blend-multiply" 
+                     onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                        (e.target as HTMLImageElement).onerror = null;
+                     }}
+                   />
                  </div>
                ))}
                {(!product.images || product.images.length === 0) && (
@@ -322,6 +340,21 @@ export default function ProductDetailsPage() {
                     </div>
                   </div>
                   <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">Current Images (Click X to remove)</label>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {editForm.images?.filter((img: string) => img).map((img: string, idx: number) => (
+                        <div key={idx} className="relative w-16 h-16 border border-gray-200 rounded-lg overflow-hidden group">
+                           <img src={img} className="w-full h-full object-contain mix-blend-multiply" />
+                           <button 
+                             type="button" 
+                             onClick={() => setEditForm({...editForm, images: editForm.images.filter((_: any, i: number) => i !== idx)})}
+                             className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                           >
+                             <X className="w-3 h-3" />
+                           </button>
+                        </div>
+                      ))}
+                    </div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Add More Images</label>
                     <input type="file" multiple accept="image/*" onChange={e => setFiles(e.target.files)} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 mb-2" />
                   </div>

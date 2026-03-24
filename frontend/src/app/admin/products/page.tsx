@@ -250,7 +250,7 @@ export default function AdminProducts() {
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:border-green-300 transition-all cursor-pointer h-full flex flex-col">
                   {/* Image Square Container */}
                   <div className="aspect-square bg-[#F8F9F9] p-4 flex items-center justify-center relative">
-                    {product.images && product.images[0] ? (
+                    {product.images && product.images[0] && product.images[0].trim() !== '' ? (
                       <img src={product.images[0]} alt={product.name} className="w-full h-full object-contain mix-blend-multiply transition-transform group-hover:scale-105" />
                     ) : (
                       <ImageIcon className="w-12 h-12 text-gray-300" />

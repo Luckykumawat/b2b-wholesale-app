@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/axios';
 import { Plus, Search, ExternalLink, DownloadCloud, Settings, Edit2, ChevronDown, CheckSquare, FileText } from 'lucide-react';
+import Link from 'next/link';
 
 import * as XLSX from 'xlsx';
 import pptxgen from 'pptxgenjs';
@@ -270,9 +271,9 @@ export default function CataloguesPage() {
                             </a>
 
                             {/* Edit */}
-                            <button className="p-1.5 border border-gray-200 text-gray-600 bg-white rounded hover:bg-gray-50" title="Edit Catalog">
+                            <Link href={`/admin/catalogues/edit/${cat._id}`} className="p-1.5 border border-gray-200 text-gray-600 bg-white rounded hover:bg-gray-50" title="Edit Catalog">
                                <Edit2 className="w-4 h-4" />
-                            </button>
+                            </Link>
 
                             {/* Download PPT / Excel Dropdown */}
                             <div className="relative">

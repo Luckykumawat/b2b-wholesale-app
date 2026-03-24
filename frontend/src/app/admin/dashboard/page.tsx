@@ -1,6 +1,7 @@
 'use client';
 
 import { Package, LayoutGrid, Activity, FileText, Users } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Dashboard() {
   const cards = [
@@ -10,6 +11,7 @@ export default function Dashboard() {
        icon: Package,
        iconColor: 'text-[#1E76A3]',
        iconBg: 'bg-[#EAF3FA]',
+       href: '/admin/manage-products'
     },
     {
        title: 'Create Catalogue for a Buyer',
@@ -17,6 +19,7 @@ export default function Dashboard() {
        icon: LayoutGrid,
        iconColor: 'text-[#E07A5F]',
        iconBg: 'bg-[#FDF2ED]',
+       href: '/admin/create-catalogues'
     },
     {
        title: 'All Catalogues',
@@ -24,6 +27,7 @@ export default function Dashboard() {
        icon: Activity,
        iconColor: 'text-[#81B29A]',
        iconBg: 'bg-[#EBF3EF]',
+       href: '/admin/catalogues'
     },
     {
        title: 'Buyers',
@@ -31,6 +35,7 @@ export default function Dashboard() {
        icon: Users,
        iconColor: 'text-[#5C80B6]',
        iconBg: 'bg-[#EAEFF6]',
+       href: '/admin/buyers'
     },
     {
        title: 'Invoices & Quotations',
@@ -38,6 +43,7 @@ export default function Dashboard() {
        icon: FileText,
        iconColor: 'text-[#9C89B8]',
        iconBg: 'bg-[#F2EFF6]',
+       href: '/admin/invoices-quotations'
     }
   ];
 
@@ -60,15 +66,17 @@ export default function Dashboard() {
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
         {cards.map((card, idx) => (
-          <div key={idx} className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer min-h-[220px] flex flex-col justify-start">
-             <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${card.iconBg}`}>
-               <card.icon className={`w-6 h-6 ${card.iconColor}`} />
-             </div>
-             <h3 className="text-[17px] font-bold text-gray-900 mb-3">{card.title}</h3>
-             <p className="text-[14px] text-gray-500 leading-relaxed font-medium">
-                {card.description}
-             </p>
-          </div>
+          <Link href={card.href} key={idx} className="block group">
+            <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm group-hover:shadow-md group-hover:border-gray-200 transition-all cursor-pointer min-h-[220px] flex flex-col justify-start">
+               <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${card.iconBg}`}>
+                 <card.icon className={`w-6 h-6 ${card.iconColor}`} />
+               </div>
+               <h3 className="text-[17px] font-bold text-gray-900 mb-3 group-hover:text-[#1B6F53] transition-colors">{card.title}</h3>
+               <p className="text-[14px] text-gray-500 leading-relaxed font-medium">
+                  {card.description}
+               </p>
+            </div>
+          </Link>
         ))}
       </div>
 
