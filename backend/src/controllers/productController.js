@@ -195,6 +195,147 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+// @desc    Bulk import products from CSV/Excel (already parsed by frontend)
+// @route   POST /api/products/bulk-import
+// @access  Private/Admin
+const bulkImportProducts = async (req, res) => {
+  try {
+    const { products: rows } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ message: 'No product rows provided.' });
+    }
+
+    const toInsert = [];
+    const errors = [];
+
+    rows.forEach((row, index) => {
+      const rowNum = index + 1;
+      const missingFields = [];
+      if (!row.name) missingFields.push('Product Name');
+      if (!row.category) missingFields.push('Category');
+      if (row.sellingPrice === undefined || row.sellingPrice === null || row.sellingPrice === '') missingFields.push('Selling Price');
+
+      if (missingFields.length > 0) {
+        errors.push({ row: rowNum, reason: `Missing required fields: ${missingFields.join(', ')}`, data: row });
+        return;
+      }
+
+      const sku = row.sku && String(row.sku).trim() !== ''
+        ? String(row.sku).trim()
+        : 'SKU-' + Math.floor(10000 + Math.random() * 90000);
+
+      // Parse image URLs — support comma-separated strings or arrays
+      let images = [];
+      if (Array.isArray(row.images)) {
+        images = row.images.filter(u => u && String(u).trim() !== '');
+      } else if (row.images && typeof row.images === 'string' && row.images.trim() !== '') {
+        images = row.images.split(',').map(u => u.trim()).filter(u => u !== '');
+      }
+
+      toInsert.push({
+        name: row.name,
+        sku,
+        variantId: row.variantId || '',
+        category: row.category,
+        subCategory: row.subCategory || '',
+        productTag: row.productTag || '',
+        theme: row.theme || '',
+        season: row.season || '',
+        collectionName: row.collectionName || '',
+        searchKeywords: row.searchKeywords || '',
+        
+        sellingPrice: Number(row.sellingPrice),
+        sellingPrice_Currency: row.sellingPrice_Currency || 'USD',
+        sellingPrice_Unit: row.sellingPrice_Unit || '',
+        
+        productCost: row.productCost ? Number(row.productCost) : undefined,
+        productCost_Currency: row.productCost_Currency || '',
+        productCost_Unit: row.productCost_Unit || '',
+
+        vendorPrice: row.vendorPrice ? Number(row.vendorPrice) : undefined,
+        vendorPrice_Currency: row.vendorPrice_Currency || '',
+        vendorPrice_Unit: row.vendorPrice_Unit || '',
+
+        stock: row.stock ? Number(row.stock) : 0,
+        moq: row.moq ? Number(row.moq) : 1,
+        samplingTime: row.samplingTime || '',
+        productionTime: row.productionTime || '',
+        
+        ft20: row.ft20 || '',
+        ft40HC: row.ft40HC || '',
+        ft40GP: row.ft40GP || '',
+
+        sizeCM: row.sizeCM || '',
+        cbm: row.cbm ? Number(row.cbm) : undefined,
+        color: row.color || '',
+        material: row.material || '',
+        metalFinish: row.metalFinish || '',
+        woodFinish: row.woodFinish || '',
+        assembledKD: row.assembledKD || '',
+
+        vendorName: row.vendorName || '',
+        productionTechnique: row.productionTechnique || '',
+        exclusiveFor: row.exclusiveFor || '',
+        
+        remarks: row.remarks || '',
+        variationHinge: row.variationHinge || '',
+        description: row.description || '',
+        images,
+        
+        // Handle dimensions if provided as separate cols or object
+        dimensions: row.dimensions ? row.dimensions : {
+          width: row.width ? Number(row.width) : undefined,
+          height: row.height ? Number(row.height) : undefined,
+          depth: row.depth ? Number(row.depth) : undefined,
+        }
+      });
+    });
+
+    let imported = 0;
+    const insertErrors = [];
+
+    if (toInsert.length > 0) {
+      try {
+        const result = await Product.insertMany(toInsert, { ordered: false });
+        imported = result.length;
+      } catch (bulkErr) {
+        // ordered:false — some docs may have been inserted even if errors occurred
+        if (bulkErr.insertedDocs) imported = bulkErr.insertedDocs.length;
+        if (bulkErr.writeErrors) {
+          bulkErr.writeErrors.forEach(we => {
+            insertErrors.push({ reason: we.errmsg || 'Duplicate SKU or DB error', data: toInsert[we.index] });
+          });
+        }
+      }
+    }
+
+    res.json({
+      imported,
+      skipped: errors.length + insertErrors.length,
+      errors: [...errors, ...insertErrors],
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Bulk delete products
+// @route   POST /api/products/bulk-delete
+// @access  Private/Admin
+const bulkDeleteProducts = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'No product IDs provided for deletion.' });
+    }
+
+    const result = await Product.deleteMany({ _id: { $in: ids } });
+    res.json({ message: `${result.deletedCount} products removed.` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get AI recommendations
 // @route   GET /api/products/recommendations/:categoryId
 // @access  Private
@@ -215,5 +356,7 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
-  getRecommendations
+  getRecommendations,
+  bulkImportProducts,
+  bulkDeleteProducts,
 };

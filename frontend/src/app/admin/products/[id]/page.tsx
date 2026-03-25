@@ -30,14 +30,51 @@ export default function ProductDetailsPage() {
       setEditForm({
         name: data.name || '',
         sku: data.sku || '',
+        variantId: data.variantId || '',
         category: data.category || '',
+        subCategory: data.subCategory || '',
+        productTag: data.productTag || '',
         description: data.description || '',
-        basePrice: data.basePrice || '',
-        stock: data.stock || '',
-        material: data.material || '',
-        finish: data.finish || '',
-        cbm: data.cbm || '',
+        remarks: data.remarks || '',
         collectionName: data.collectionName || '',
+        theme: data.theme || '',
+        season: data.season || '',
+        searchKeywords: data.searchKeywords || '',
+
+        sellingPrice: data.sellingPrice || '',
+        sellingPrice_Currency: data.sellingPrice_Currency || 'USD',
+        sellingPrice_Unit: data.sellingPrice_Unit || '',
+
+        productCost: data.productCost || '',
+        productCost_Currency: data.productCost_Currency || 'USD',
+        productCost_Unit: data.productCost_Unit || '',
+
+        vendorPrice: data.vendorPrice || '',
+        vendorPrice_Currency: data.vendorPrice_Currency || 'USD',
+        vendorPrice_Unit: data.vendorPrice_Unit || '',
+
+        stock: data.stock || '',
+        moq: data.moq || 1,
+        samplingTime: data.samplingTime || '',
+        productionTime: data.productionTime || '',
+
+        material: data.material || '',
+        metalFinish: data.metalFinish || '',
+        woodFinish: data.woodFinish || '',
+        color: data.color || '',
+        sizeCM: data.sizeCM || '',
+        cbm: data.cbm || '',
+        
+        ft20: data.ft20 || '',
+        ft40HC: data.ft40HC || '',
+        ft40GP: data.ft40GP || '',
+
+        exclusiveFor: data.exclusiveFor || '',
+        assembledKD: data.assembledKD || '',
+        vendorName: data.vendorName || '',
+        productionTechnique: data.productionTechnique || '',
+        variationHinge: data.variationHinge || '',
+
         dimW: data.dimensions?.width || '',
         dimH: data.dimensions?.height || '',
         dimD: data.dimensions?.depth || '',
@@ -91,11 +128,12 @@ export default function ProductDetailsPage() {
             ${product.images?.[0] ? `<img src="${product.images[0]}" />` : ''}
             <h1>${product.name}</h1>
             <h2>SKU: ${product.sku || product._id.slice(-6).toUpperCase()}</h2>
-            <div class="price">USD ${product.basePrice.toFixed(2)}</div>
+            <div class="price">${product.sellingPrice_Currency || 'USD'} ${Number(product.sellingPrice || 0).toFixed(2)}</div>
             <ul>
                ${product.material ? `<li>Material: ${product.material}</li>` : ''}
-               ${product.finish ? `<li>Finish: ${product.finish}</li>` : ''}
-               ${product.dimensions?.width ? `<li>Size: ${product.dimensions.width}x${product.dimensions.height}x${product.dimensions.depth} cm</li>` : ''}
+               ${product.metalFinish ? `<li>Metal Finish: ${product.metalFinish}</li>` : ''}
+               ${product.woodFinish ? `<li>Wood Finish: ${product.woodFinish}</li>` : ''}
+               ${product.sizeCM ? `<li>Size: ${product.sizeCM}</li>` : ''}
             </ul>
           </div>
           <script>
@@ -288,70 +326,102 @@ export default function ProductDetailsPage() {
          </div>
 
          {/* Right Side: Details Data OR Edit Form */}
-         <div className="w-full lg:w-[55%] flex flex-col">
-            
+          <div className="w-full lg:w-[55%] flex flex-col">
             {isEditing ? (
               <form onSubmit={handleUpdate} className="space-y-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 border-b border-gray-200 pb-2">Edit Product Information</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-2 flex-grow">Edit Product</h3>
+                </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-8 overflow-y-auto max-h-[70vh] pr-2 custom-scrollbar">
+                  {/* Section: General */}
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Product Name *</label>
-                    <input type="text" required value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">SKU</label>
-                    <input type="text" value={editForm.sku} onChange={e => setEditForm({...editForm, sku: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Category *</label>
-                    <input type="text" required value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Stock Quantity *</label>
-                    <input type="number" required value={editForm.stock} onChange={e => setEditForm({...editForm, stock: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Base Price ($) *</label>
-                    <input type="number" required step="0.01" value={editForm.basePrice} onChange={e => setEditForm({...editForm, basePrice: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">CBM</label>
-                    <input type="number" step="0.001" value={editForm.cbm} onChange={e => setEditForm({...editForm, cbm: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Material</label>
-                    <input type="text" value={editForm.material} onChange={e => setEditForm({...editForm, material: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Finish</label>
-                    <input type="text" value={editForm.finish} onChange={e => setEditForm({...editForm, finish: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Collection Name</label>
-                    <input type="text" value={editForm.collectionName} onChange={e => setEditForm({...editForm, collectionName: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Dimensions (W x H x D in cm)</label>
-                    <div className="flex space-x-2">
-                       <input type="number" placeholder="W" value={editForm.dimW} onChange={e => setEditForm({...editForm, dimW: e.target.value})} className="w-1/3 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
-                       <input type="number" placeholder="H" value={editForm.dimH} onChange={e => setEditForm({...editForm, dimH: e.target.value})} className="w-1/3 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
-                       <input type="number" placeholder="D" value={editForm.dimD} onChange={e => setEditForm({...editForm, dimD: e.target.value})} className="w-1/3 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                    <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-3">General Information</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Product Name *</label>
+                        <input type="text" required value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Product ID / SKU</label>
+                        <input type="text" value={editForm.sku} onChange={e => setEditForm({...editForm, sku: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Variant ID</label>
+                        <input type="text" value={editForm.variantId} onChange={e => setEditForm({...editForm, variantId: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Category *</label>
+                        <input type="text" required value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Sub Category</label>
+                        <input type="text" value={editForm.subCategory} onChange={e => setEditForm({...editForm, subCategory: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Collection</label>
+                        <input type="text" value={editForm.collectionName} onChange={e => setEditForm({...editForm, collectionName: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Season</label>
+                        <input type="text" value={editForm.season} onChange={e => setEditForm({...editForm, season: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                      </div>
                     </div>
                   </div>
+
+                  {/* Section: Pricing */}
+                  <div>
+                    <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-3">Pricing & Logic</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Selling Price *</label>
+                        <div className="flex">
+                          <select value={editForm.sellingPrice_Currency} onChange={e => setEditForm({...editForm, sellingPrice_Currency: e.target.value})} className="px-1 border border-r-0 border-gray-200 rounded-l-lg bg-gray-50 text-[10px]">
+                            <option>USD</option><option>EUR</option>
+                          </select>
+                          <input type="number" required step="0.01" value={editForm.sellingPrice} onChange={e => setEditForm({...editForm, sellingPrice: e.target.value})} className="w-full px-3 py-2 rounded-r-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Stock Quantity *</label>
+                        <input type="number" required value={editForm.stock} onChange={e => setEditForm({...editForm, stock: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section: Physical */}
+                  <div>
+                    <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-3">Physical Attributes</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Material</label>
+                        <input type="text" value={editForm.material} onChange={e => setEditForm({...editForm, material: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Metal Finish</label>
+                        <input type="text" value={editForm.metalFinish} onChange={e => setEditForm({...editForm, metalFinish: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Wood Finish</label>
+                        <input type="text" value={editForm.woodFinish} onChange={e => setEditForm({...editForm, woodFinish: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section: Images */}
                   <div className="col-span-2">
                     <label className="block text-xs font-semibold text-gray-700 mb-2">Current Images (Click X to remove)</label>
                     <div className="flex flex-wrap gap-2 mb-4">
                       {editForm.images?.filter((img: string) => img).map((img: string, idx: number) => (
                         <div key={idx} className="relative w-16 h-16 border border-gray-200 rounded-lg overflow-hidden group">
-                           <img src={img} className="w-full h-full object-contain mix-blend-multiply" />
-                           <button 
-                             type="button" 
-                             onClick={() => setEditForm({...editForm, images: editForm.images.filter((_: any, i: number) => i !== idx)})}
-                             className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                           >
-                             <X className="w-3 h-3" />
-                           </button>
+                          <img src={img} className="w-full h-full object-contain mix-blend-multiply" alt={`Product ${idx}`} />
+                          <button 
+                            type="button" 
+                            onClick={() => setEditForm({...editForm, images: editForm.images.filter((_: any, i: number) => i !== idx)})}
+                            className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -361,73 +431,109 @@ export default function ProductDetailsPage() {
                 </div>
                 
                 <div className="pt-4 flex justify-end space-x-3">
-                   <button type="button" onClick={() => setIsEditing(false)} className="px-5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-200">Cancel</button>
-                   <button type="submit" disabled={submitting} className="px-5 py-2 rounded-lg font-medium text-white bg-[#1B6F53] hover:bg-[#14553F]">{submitting ? 'Saving...' : 'Save Changes'}</button>
+                  <button type="button" onClick={() => setIsEditing(false)} className="px-5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-200">Cancel</button>
+                  <button type="submit" disabled={submitting} className="px-5 py-2 rounded-lg font-medium text-white bg-[#1B6F53] hover:bg-[#14553F]">{submitting ? 'Saving...' : 'Save Changes'}</button>
                 </div>
               </form>
             ) : (
-              <>
-                <div className="mb-8">
-                   <p className="text-sm text-gray-500 font-medium mb-1">Base selling price</p>
-                   <div className="flex items-center space-x-2">
-                     <span className="text-2xl font-bold text-gray-900">$ {product.basePrice.toFixed(2)}</span>
-                     <span className="text-sm text-gray-500 font-medium">per-piece</span>
-                     <span className="text-sm text-[#1B6F53] font-bold ml-4 cursor-pointer hover:underline">See price history</span>
-                   </div>
+              <div className="flex flex-col">
+                <div className="mb-8 p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Selling price</p>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-3xl font-black text-gray-900">{product.sellingPrice_Currency || 'USD'} {Number(product.sellingPrice || 0).toFixed(2)}</span>
+                      <span className="text-xs text-gray-400 font-medium">/ {product.sellingPrice_Unit || 'piece'}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Available Stock</p>
+                    <span className="text-xl font-bold text-[#1B6F53]">{product.stock || 0} units</span>
+                  </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-2 gap-y-6">
-                   <div>
-                      <p className="text-xs text-gray-500 font-medium mb-1">Category</p>
-                      <p className="font-semibold text-gray-900">{product.category || '-'}</p>
-                   </div>
-                   <div>
-                      <p className="text-xs text-gray-500 font-medium mb-1">Stock</p>
-                      <p className="font-semibold text-gray-900">{product.stock} units</p>
-                   </div>
-                   <div>
-                      <p className="text-xs text-gray-500 font-medium mb-1">Product ID</p>
-                      <p className="font-semibold text-gray-900">{product.sku || product._id.slice(-6).toUpperCase()}</p>
-                   </div>
-                </div>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                    {product.name && (
+                      <div className="col-span-2"><p className="text-[10px] font-bold text-gray-400 uppercase">Product Name</p><p className="text-lg font-bold text-gray-900">{product.name}</p></div>
+                    )}
+                    {product.category && (
+                      <div><p className="text-[10px] font-bold text-gray-400 uppercase">Category</p><p className="font-semibold text-gray-900">{product.category}</p></div>
+                    )}
+                    {product.variantId && (
+                      <div><p className="text-[10px] font-bold text-gray-400 uppercase">Variant ID</p><p className="font-semibold text-gray-900">{product.variantId}</p></div>
+                    )}
+                    {product.subCategory && (
+                      <div><p className="text-[10px] font-bold text-gray-400 uppercase">Sub Category</p><p className="font-semibold text-gray-900">{product.subCategory}</p></div>
+                    )}
+                    {product.productTag && (
+                      <div><p className="text-[10px] font-bold text-gray-400 uppercase">Product Tag</p><p className="font-semibold text-gray-900">{product.productTag}</p></div>
+                    )}
+                    {product.collectionName && (
+                      <div><p className="text-[10px] font-bold text-gray-400 uppercase">Collection</p><p className="font-semibold text-gray-900">{product.collectionName}</p></div>
+                    )}
+                    {product.theme && (
+                      <div><p className="text-[10px] font-bold text-gray-400 uppercase">Theme</p><p className="font-semibold text-gray-900">{product.theme}</p></div>
+                    )}
+                    {product.season && (
+                      <div><p className="text-[10px] font-bold text-gray-400 uppercase">Season</p><p className="font-semibold text-gray-900">{product.season}</p></div>
+                    )}
+                  </div>
 
-                {/* Custom Table Details */}
-                <div className="border border-gray-200 rounded-lg overflow-hidden mt-4">
-                   <div className="grid grid-cols-2">
-                     <div className="px-4 py-3 border-b border-gray-200 bg-[#F9FAFB] text-sm text-gray-500 font-medium">Collection Name</div>
-                     <div className="px-4 py-3 border-b border-l border-gray-200 bg-white text-sm font-semibold text-gray-900">{product.collectionName || '-'}</div>
-                     
-                     <div className="px-4 py-3 border-b border-gray-200 bg-[#F9FAFB] text-sm text-gray-500 font-medium">Material</div>
-                     <div className="px-4 py-3 border-b border-l border-gray-200 bg-white text-sm font-semibold text-gray-900">{product.material || '-'}</div>
+                  <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                    {[
+                      { label: 'Material', value: product.material },
+                      { label: 'Metal Finish', value: product.metalFinish },
+                      { label: 'Wood Finish', value: product.woodFinish },
+                      { label: 'Color', value: product.color },
+                      { label: 'Size (CM)', value: product.sizeCM },
+                      { label: 'CBM', value: product.cbm },
+                      { label: 'MOQ', value: product.moq },
+                      { label: 'Sampling Time', value: product.samplingTime },
+                      { label: 'Production Time', value: product.productionTime },
+                      { label: 'Vendor Price', value: product.vendorPrice ? `${product.vendorPrice_Currency || 'USD'} ${product.vendorPrice}` : null },
+                      { label: 'Product Cost', value: product.productCost ? `${product.productCost_Currency || 'USD'} ${product.productCost}` : null },
+                      { label: 'Vendor Name', value: product.vendorName },
+                      { label: '20\'ft Loading', value: product.ft20 },
+                      { label: '40\'ft HC Loading', value: product.ft40HC },
+                      { label: '40\'ft GP Loading', value: product.ft40GP },
+                      { label: 'Assembled/KD', value: product.assembledKD },
+                      { label: 'Exclusive For', value: product.exclusiveFor },
+                      { label: 'Production Technique', value: product.productionTechnique },
+                      { label: 'Variation Hinge', value: product.variationHinge },
+                    ].filter(f => f.value && String(f.value).trim() !== '').map((field, idx) => (
+                      <div key={idx} className={`flex border-b border-gray-50 last:border-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                        <div className="w-1/3 px-4 py-2.5 text-xs font-bold text-gray-400 uppercase tracking-tight flex items-center">{field.label}</div>
+                        <div className="w-2/3 px-4 py-2.5 text-sm font-semibold text-gray-800 border-l border-gray-50 text-wrap break-all">{field.value}</div>
+                      </div>
+                    ))}
+                  </div>
 
-                     <div className="px-4 py-3 border-b border-gray-200 bg-[#F9FAFB] text-sm text-gray-500 font-medium">Size (CM)</div>
-                     <div className="px-4 py-3 border-b border-l border-gray-200 bg-white text-sm font-semibold text-gray-900">{dimensionString}</div>
-
-                     <div className="px-4 py-3 border-b border-gray-200 bg-[#F9FAFB] text-sm text-gray-500 font-medium">Product Name</div>
-                     <div className="px-4 py-3 border-b border-l border-gray-200 bg-white text-sm font-semibold text-gray-900">{product.name || '-'}</div>
-
-                     <div className="px-4 py-3 border-b border-gray-200 bg-[#F9FAFB] text-sm text-gray-500 font-medium">Selling Price</div>
-                     <div className="px-4 py-3 border-b border-l border-gray-200 bg-white text-sm font-semibold text-gray-900">USD {product.basePrice} per-piece</div>
-
-                     <div className="px-4 py-3 border-b border-gray-200 bg-[#F9FAFB] text-sm text-gray-500 font-medium">Wood Finish</div>
-                     <div className="px-4 py-3 border-b border-l border-gray-200 bg-white text-sm font-semibold text-gray-900">{product.finish || '-'}</div>
-
-                     <div className="px-4 py-3 border-gray-200 bg-[#F9FAFB] text-sm text-gray-500 font-medium">CBM</div>
-                     <div className="px-4 py-3 border-l border-gray-200 bg-white text-sm font-semibold text-gray-900">{product.cbm || '-'}</div>
-                   </div>
+                  {product.description && (
+                    <div className="bg-[#F8F9F9] p-4 rounded-xl border border-gray-100">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Description</p>
+                      <p className="text-sm text-gray-600 leading-relaxed">{product.description}</p>
+                    </div>
+                  )}
+                  
+                  {product.remarks && (
+                    <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100/50">
+                      <p className="text-[10px] font-bold text-amber-400 uppercase mb-2">Remarks</p>
+                      <p className="text-sm text-amber-800 italic">{product.remarks}</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-8 space-y-4">
-                   <div>
-                     <p className="text-xs text-gray-500 font-medium mb-1">Updated on</p>
-                     <p className="text-sm font-bold text-gray-900">{formatDate(product.updatedAt)}</p>
-                   </div>
-                   <div>
-                     <p className="text-xs text-gray-500 font-medium mb-1">Added on</p>
-                     <p className="text-sm font-bold text-gray-900">{formatDate(product.createdAt)}</p>
-                   </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Updated on</p>
+                    <p className="text-sm font-bold text-gray-900">{formatDate(product.updatedAt || new Date())}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Added on</p>
+                    <p className="text-sm font-bold text-gray-900">{formatDate(product.createdAt || new Date())}</p>
+                  </div>
                 </div>
-              </>
+              </div>
             )}
 
          </div>

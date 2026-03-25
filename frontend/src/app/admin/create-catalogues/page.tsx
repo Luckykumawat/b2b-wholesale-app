@@ -5,8 +5,7 @@ import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import { Plus, Filter, ArrowUpDown, X, Search, Image as ImageIcon, Check, DownloadCloud, CheckCircle, Copy, ChevronLeft } from 'lucide-react';
 
-import * as XLSX from 'xlsx';
-import pptxgen from 'pptxgenjs';
+import { generateExcelCatalog, generatePPTCatalog, generatePDFCatalog } from '@/lib/exportUtils';
 
 interface Product {
   _id: string;
@@ -100,47 +99,17 @@ export default function CreateCatalogues() {
 
   const exportExcel = () => {
     if (!generatedCatalogue) return;
-    const data = selectedProducts.map(p => ({
-      'Product ID': p.sku || p._id.slice(-6).toUpperCase(),
-      'Product Name': p.name,
-      Category: p.category,
-      Collection: p.collectionName || '',
-      Price: p.basePrice,
-      Material: p.material || '',
-      Finish: p.finish || '',
-      CBM: p.cbm || '',
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Catalogue');
-    XLSX.writeFile(workbook, `${catalogueName.replace(/\\s+/g, '_')}_Catalogue.xlsx`);
+    generateExcelCatalog(selectedProducts, catalogueName);
   };
 
   const exportPPT = () => {
     if (!generatedCatalogue) return;
-    const pres = new pptxgen();
-    
-    // Title Slide
-    const titleSlide = pres.addSlide();
-    titleSlide.addText(catalogueName, { x: 0.5, y: 2, fontSize: 36, bold: true, color: '1B6F53', align: 'center', w: 9 });
-    titleSlide.addText(`Prepared for: ${buyerCompany}`, { x: 0.5, y: 3, fontSize: 24, align: 'center', w: 9, color: '555555' });
-    
-    // Product Slides
-    selectedProducts.forEach(p => {
-      const slide = pres.addSlide();
-      slide.addText(p.name, { x: 0.5, y: 0.5, fontSize: 24, bold: true, color: '1B6F53' });
-      slide.addText(`ID: ${p.sku || p._id.slice(-6).toUpperCase()} | Price: $${p.basePrice}`, { x: 0.5, y: 1.2, fontSize: 16, color: '555555' });
-      
-      const details = [
-        { text: `Material: ${p.material || 'N/A'}` },
-        { text: `Finish: ${p.finish || 'N/A'}` },
-        { text: `CBM: ${p.cbm || 'N/A'}` },
-        { text: `Dimensions: ${p.dimensions?.width}x${p.dimensions?.height}x${p.dimensions?.depth} cm` }
-      ];
-      slide.addText(details, { x: 5, y: 2, fontSize: 14, bullet: true });
-    });
-    
-    pres.writeFile({ fileName: `${catalogueName.replace(/\\s+/g, '_')}_Presentation.pptx` });
+    generatePPTCatalog(selectedProducts, catalogueName, buyerCompany);
+  };
+
+  const exportPDF = () => {
+    if (!generatedCatalogue) return;
+    generatePDFCatalog(selectedProducts, catalogueName, buyerCompany);
   };
 
   const copyLink = () => {
@@ -495,7 +464,7 @@ export default function CreateCatalogues() {
             </div>
 
             {/* Excel Option */}
-            <div>
+            <div className="border-b border-gray-100 border-dashed pb-8">
                <p className="text-sm font-semibold text-gray-900 mb-4">Get excel sheet</p>
                <div className="flex items-center justify-between">
                   <div className="w-32 h-20 bg-gray-50 rounded flex items-center justify-center border border-gray-100">
@@ -507,6 +476,24 @@ export default function CreateCatalogues() {
                      <p className="text-xs text-gray-500 font-medium leading-relaxed max-w-[200px]">Excel sheet will be downloaded with selected attributes</p>
                   </div>
                   <button onClick={exportExcel} className="px-6 py-2 bg-[#1B6F53] text-white font-semibold rounded hover:bg-[#155640]">
+                     Download
+                  </button>
+               </div>
+            </div>
+
+            {/* PDF Option */}
+            <div>
+               <p className="text-sm font-semibold text-gray-900 mb-4">Get PDF document</p>
+               <div className="flex items-center justify-between">
+                  <div className="w-32 h-20 bg-gray-50 rounded flex items-center justify-center border border-gray-100">
+                     <div className="w-10 h-10 bg-red-500 flex items-center justify-center rounded shadow-sm">
+                        <span className="text-white font-bold pt-1 text-xs text-center w-full">PDF</span>
+                     </div>
+                  </div>
+                  <div className="flex-1 px-6">
+                     <p className="text-xs text-gray-500 font-medium leading-relaxed max-w-[200px]">PDF document format configured with specified layout</p>
+                  </div>
+                  <button onClick={exportPDF} className="px-6 py-2 bg-[#1B6F53] text-white font-semibold rounded hover:bg-[#155640]">
                      Download
                   </button>
                </div>

@@ -5,8 +5,7 @@ import api from '@/lib/axios';
 import { Plus, Search, ExternalLink, DownloadCloud, Settings, Edit2, ChevronDown, CheckSquare, FileText } from 'lucide-react';
 import Link from 'next/link';
 
-import * as XLSX from 'xlsx';
-import pptxgen from 'pptxgenjs';
+import { generateExcelCatalog, generatePPTCatalog, generatePDFCatalog } from '@/lib/exportUtils';
 
 interface Product {
   _id: string;
@@ -67,47 +66,17 @@ export default function CataloguesPage() {
 
   const exportExcel = (cat: Catalogue) => {
     setDownloadDropdownOpen(null);
-    const data = cat.products.map(p => ({
-      'Product ID': p.sku || p._id.slice(-6).toUpperCase(),
-      'Product Name': p.name,
-      Category: p.category,
-      Collection: p.collectionName || '',
-      Price: p.basePrice,
-      Material: p.material || '',
-      Finish: p.finish || '',
-      CBM: p.cbm || '',
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Catalogue');
-    XLSX.writeFile(workbook, `${cat.name.replace(/\\s+/g, '_')}_Catalogue.xlsx`);
+    generateExcelCatalog(cat.products, cat.name);
   };
 
   const exportPPT = (cat: Catalogue) => {
     setDownloadDropdownOpen(null);
-    const pres = new pptxgen();
-    
-    // Title Slide
-    const titleSlide = pres.addSlide();
-    titleSlide.addText(cat.name, { x: 0.5, y: 2, fontSize: 36, bold: true, color: '1B6F53', align: 'center', w: 9 });
-    titleSlide.addText(`Prepared for: ${cat.buyerCompany}`, { x: 0.5, y: 3, fontSize: 24, align: 'center', w: 9, color: '555555' });
-    
-    // Product Slides
-    cat.products.forEach(p => {
-      const slide = pres.addSlide();
-      slide.addText(p.name, { x: 0.5, y: 0.5, fontSize: 24, bold: true, color: '1B6F53' });
-      slide.addText(`ID: ${p.sku || p._id.slice(-6).toUpperCase()} | Price: $${p.basePrice}`, { x: 0.5, y: 1.2, fontSize: 16, color: '555555' });
-      
-      const details = [
-        { text: `Material: ${p.material || 'N/A'}` },
-        { text: `Finish: ${p.finish || 'N/A'}` },
-        { text: `CBM: ${p.cbm || 'N/A'}` },
-        { text: `Dimensions: ${p.dimensions?.width}x${p.dimensions?.height}x${p.dimensions?.depth} cm` }
-      ];
-      slide.addText(details, { x: 5, y: 2, fontSize: 14, bullet: true });
-    });
-    
-    pres.writeFile({ fileName: `${cat.name.replace(/\\s+/g, '_')}_Presentation.pptx` });
+    generatePPTCatalog(cat.products, cat.name, cat.buyerCompany);
+  };
+
+  const exportPDF = (cat: Catalogue) => {
+    setDownloadDropdownOpen(null);
+    generatePDFCatalog(cat.products, cat.name, cat.buyerCompany);
   };
 
   const filteredCatalogues = catalogues.filter(c => 
