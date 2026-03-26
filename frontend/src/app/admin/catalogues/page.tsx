@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import api from '@/lib/axios';
-import { Plus, Search, ExternalLink, DownloadCloud, Settings, Edit2, ChevronDown, CheckSquare, FileText } from 'lucide-react';
+import { Plus, Search, ExternalLink, DownloadCloud, Settings, Edit2, ChevronDown, CheckSquare, FileText, User as UserIcon, Calendar } from 'lucide-react';
 import Link from 'next/link';
+import MultiSelectFilter from '@/components/admin/MultiSelectFilter';
 
 import { generateExcelCatalog, generatePPTCatalog, generatePDFCatalog } from '@/lib/exportUtils';
 
@@ -35,9 +36,19 @@ interface Catalogue {
 export default function CataloguesPage() {
   const [catalogues, setCatalogues] = useState<Catalogue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [counts, setCounts] = useState({ Total: 0, Draft: 0, Active: 0, Inactive: 0 });
   
-  // Filters
+  // Filter States
   const [search, setSearch] = useState('');
+  const [selectedBuyers, setSelectedBuyers] = useState<string[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [createdOnFilter, setCreatedOnFilter] = useState('All Time');
+  const [sortBy, setSortBy] = useState('Recently Created');
+  
+  // Available Options for Multi-select
+  const [availableBuyers, setAvailableBuyers] = useState<string[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<string[]>([]);
   
   // Dropdown States
   const [downloadDropdownOpen, setDownloadDropdownOpen] = useState<string | null>(null);
@@ -45,8 +56,26 @@ export default function CataloguesPage() {
   const fetchCatalogues = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/catalogues');
-      setCatalogues(data);
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      selectedBuyers.forEach(b => params.append('buyer', b));
+      selectedUsers.forEach(u => params.append('user', u));
+      if (statusFilter !== 'All') params.append('status', statusFilter);
+      if (createdOnFilter !== 'All Time') params.append('createdOn', createdOnFilter);
+      params.append('sortBy', sortBy);
+
+      const { data } = await api.get('/catalogues?' + params.toString());
+      setCatalogues(data.catalogues || []);
+      setCounts(data.counts || { Total: 0, Draft: 0, Active: 0, Inactive: 0 });
+      
+      // Update available options if they are empty (first load)
+      if (availableBuyers.length === 0 && data.catalogues) {
+        const uniqueBuyers = Array.from(new Set(data.catalogues.map((c: Catalogue) => c.buyerCompany))) as string[];
+        setAvailableBuyers(uniqueBuyers);
+        
+        const uniqueUsers = Array.from(new Set(data.catalogues.map((c: any) => c.createdBy?.name || 'Admin'))) as string[];
+        setAvailableUsers(uniqueUsers);
+      }
     } catch (error) {
       console.error('Failed to fetch catalogues:', error);
     } finally {
@@ -56,7 +85,7 @@ export default function CataloguesPage() {
 
   useEffect(() => {
     fetchCatalogues();
-  }, []);
+  }, [selectedBuyers, selectedUsers, statusFilter, createdOnFilter, sortBy, search]);
 
   const copyLink = (token: string) => {
     const link = `${window.location.origin}/shared-catalog/${token}`;
@@ -79,10 +108,7 @@ export default function CataloguesPage() {
     generatePDFCatalog(cat.products, cat.name, cat.buyerCompany);
   };
 
-  const filteredCatalogues = catalogues.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) || 
-    c.buyerCompany.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredCatalogues = catalogues;
 
   const formatDate = (dateString: string) => {
     const d = new Date(dateString);
@@ -121,43 +147,74 @@ export default function CataloguesPage() {
             </div>
             
             <div className="w-48 max-w-full">
-               <label className="block text-xs text-gray-500 mb-1">Buyer</label>
-               <select className="w-full px-3 py-2 border border-gray-200 rounded text-sm outline-none bg-white text-gray-700">
-                 <option>All Buyers</option>
-               </select>
+               <MultiSelectFilter 
+                 label="Buyer" 
+                 options={availableBuyers} 
+                 selectedValues={selectedBuyers} 
+                 onChange={setSelectedBuyers} 
+               />
             </div>
 
             <div className="w-48 max-w-full">
-               <label className="block text-xs text-gray-500 mb-1">User</label>
-               <select className="w-full px-3 py-2 border border-gray-200 rounded text-sm outline-none bg-white text-gray-700">
-                 <option>All Users</option>
-               </select>
+               <MultiSelectFilter 
+                 label="User" 
+                 options={availableUsers} 
+                 selectedValues={selectedUsers} 
+                 onChange={setSelectedUsers} 
+               />
             </div>
 
             <div className="w-48 max-w-full">
                <label className="block text-xs text-gray-500 mb-1">Status</label>
-               <select className="w-full px-3 py-2 border border-gray-200 rounded text-sm outline-none bg-white text-gray-700">
-                 <option>All Catalogues ({catalogues.length})</option>
+               <select 
+                 value={statusFilter}
+                 onChange={e => setStatusFilter(e.target.value)}
+                 className="w-full px-3 py-2 border border-gray-200 rounded text-sm outline-none bg-white text-gray-700"
+               >
+                 <option value="All">All Catalogues ({counts.Total})</option>
+                 <option value="Draft">Draft ({counts.Draft})</option>
+                 <option value="Active">Active ({counts.Active})</option>
+                 <option value="Inactive">Inactive ({counts.Inactive})</option>
                </select>
             </div>
 
             <div className="w-40 max-w-full">
                <label className="block text-xs text-gray-500 mb-1">Created On</label>
-               <select className="w-full px-3 py-2 border border-gray-200 rounded text-sm outline-none bg-white text-gray-700">
+               <select 
+                 value={createdOnFilter}
+                 onChange={e => setCreatedOnFilter(e.target.value)}
+                 className="w-full px-3 py-2 border border-gray-200 rounded text-sm outline-none bg-white text-gray-700"
+               >
                  <option>All Time</option>
+                 <option>Today</option>
+                 <option>Yesterday</option>
+                 <option>This Week</option>
+                 <option>Past week</option>
+                 <option>This month</option>
+                 <option>Past month</option>
+                 <option>Past 6 months</option>
+                 <option>This Year</option>
+                 <option>Last Years</option>
+                 <option>Last 2 Years</option>
                </select>
             </div>
 
             <div className="w-48 max-w-full ml-auto">
                <label className="block text-xs text-gray-500 mb-1">Sort</label>
-               <select className="w-full px-3 py-2 border border-gray-900 border-b-[2px] rounded text-sm outline-none bg-white font-semibold text-gray-900">
+               <select 
+                 value={sortBy}
+                 onChange={e => setSortBy(e.target.value)}
+                 className="w-full px-3 py-2 border border-gray-900 border-b-[2px] rounded text-sm outline-none bg-white font-semibold text-gray-900"
+               >
                  <option>Recently Created</option>
+                 <option>Recently access</option>
+                 <option>Name of buyer</option>
                </select>
             </div>
          </div>
 
          <div className="flex justify-between items-center text-xs text-gray-500 mb-2">
-            <span>Showing {filteredCatalogues.length} catalogues</span>
+            <span>Showing {catalogues.length} catalogues</span>
             <label className="flex items-center space-x-2 cursor-pointer">
               <input type="checkbox" className="w-3.5 h-3.5 rounded border-gray-300 text-[#1B6F53] focus:ring-[#1B6F53]" />
               <span>Filter Trade Show Catalogues</span>

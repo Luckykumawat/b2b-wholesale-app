@@ -4,8 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/axios';
 import { Package, DownloadCloud, FileText, CheckSquare, ChevronLeft, ChevronRight, X, Image as ImageIcon, ArrowLeft, Heart, MessageSquare } from 'lucide-react';
 import { useParams } from 'next/navigation';
-import * as XLSX from 'xlsx';
-import pptxgen from 'pptxgenjs';
+import { generateExcelCatalog, generatePPTCatalog } from '@/lib/exportUtils';
 
 interface Product {
   _id: string;
@@ -79,44 +78,28 @@ export default function SharedCatalog() {
     }
   };
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
     if (!data) return;
-    const exportData = data.products.map(p => ({
-      'Product ID': p.sku || p._id.slice(-6).toUpperCase(),
-      'Product Name': p.name,
-      Category: p.category,
-      Collection: p.collectionName || '',
-      Price: p.customPrice,
-      Material: p.material || '',
-      Finish: p.finish || '',
-      CBM: p.cbm || '',
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Catalogue');
-    XLSX.writeFile(workbook, `${data.name.replace(/\s+/g, '_')}_Catalogue.xlsx`);
+    try {
+      await generateExcelCatalog(data.products.map(p => ({
+        ...p,
+        basePrice: p.customPrice
+      })), data.name);
+    } catch (error) {
+      console.error('Error exporting Excel', error);
+    }
   };
 
-  const exportPPT = () => {
+  const exportPPT = async () => {
     if (!data) return;
-    const pres = new pptxgen();
-    const titleSlide = pres.addSlide();
-    titleSlide.addText(data.name, { x: 0.5, y: 2, fontSize: 36, bold: true, color: '1B6F53', align: 'center', w: 9 });
-    titleSlide.addText(`Prepared for: ${data.buyerCompany}`, { x: 0.5, y: 3, fontSize: 24, align: 'center', w: 9, color: '555555' });
-    
-    data.products.forEach(p => {
-      const slide = pres.addSlide();
-      slide.addText(p.name, { x: 0.5, y: 0.5, fontSize: 24, bold: true, color: '1B6F53' });
-      slide.addText(`ID: ${p.sku || p._id.slice(-6).toUpperCase()} | Price: $${p.customPrice}`, { x: 0.5, y: 1.2, fontSize: 16, color: '555555' });
-      const details = [
-        { text: `Material: ${p.material || 'N/A'}` },
-        { text: `Finish: ${p.finish || 'N/A'}` },
-        { text: `CBM: ${p.cbm || 'N/A'}` },
-        { text: `Dimensions: ${p.dimensions?.width}x${p.dimensions?.height}x${p.dimensions?.depth} cm` }
-      ];
-      slide.addText(details, { x: 5, y: 2, fontSize: 14, bullet: true });
-    });
-    pres.writeFile({ fileName: `${data.name.replace(/\s+/g, '_')}_Presentation.pptx` });
+    try {
+      await generatePPTCatalog(data.products.map(p => ({
+        ...p,
+        basePrice: p.customPrice
+      })), data.name, data.buyerCompany);
+    } catch (error) {
+      console.error('Error exporting PPT', error);
+    }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-white font-medium text-gray-500 italic">Initializing catalog session...</div>;
@@ -133,7 +116,7 @@ export default function SharedCatalog() {
         case 'Material': return product.material || 'N/A';
         case 'Wood Finish': return product.finish || 'N/A';
         case 'Size (CM)': return product.dimensions ? `${product.dimensions.width}X${product.dimensions.height}X${product.dimensions.depth}` : 'N/A';
-        case 'Selling Price': return `$ ${product.customPrice.toFixed(2)}`;
+        case 'Selling Price': return `$ ${Number(product.customPrice || product.basePrice || 0).toFixed(2)}`;
         case 'CBM': return product.cbm || 'N/A';
         default: return null;
       }
@@ -324,12 +307,8 @@ export default function SharedCatalog() {
 
                <div className="max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
                   {data.customColumns
-                    .filter(c => !['Image', 'Product ID', 'Product Name', 'Selling Price'].includes(c))
+                    .filter(c => c !== 'Image' && c !== 'Product ID')
                     .map(col => renderAttribute(activeProduct, col))}
-                  
-                  {/* Always show Name and Price if not in attributes list but commonly needed */}
-                  {renderAttribute(activeProduct, 'Product Name')}
-                  {renderAttribute(activeProduct, 'Selling Price')}
                </div>
             </div>
           </div>

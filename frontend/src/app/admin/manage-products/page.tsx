@@ -13,6 +13,7 @@ import Link from 'next/link';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { generateExcelCatalog, generatePPTCatalog, generatePDFCatalog } from '@/lib/exportUtils';
+import { generateLabelHTML } from '@/lib/labelUtils';
 
 // ─── CSV Column Schema ───────────────────────────────────────────────────────
 const CSV_HEADERS = [
@@ -130,6 +131,7 @@ export default function AdminProducts() {
   const [search, setSearch] = useState('');
   const [skuFilter, setSkuFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [subCategoryFilter, setSubCategoryFilter] = useState('');
   const [collectionFilter, setCollectionFilter] = useState('');
 
   // Selection
@@ -206,6 +208,7 @@ export default function AdminProducts() {
       if (search) query.append('search', search);
       if (skuFilter) query.append('sku', skuFilter);
       if (categoryFilter) query.append('category', categoryFilter);
+      if (subCategoryFilter) query.append('subCategory', subCategoryFilter);
       if (collectionFilter) query.append('collectionName', collectionFilter);
       const { data } = await api.get(`/products?${query.toString()}`);
       setProducts(data);
@@ -214,20 +217,21 @@ export default function AdminProducts() {
     } finally {
       setLoading(false);
     }
-  }, [search, skuFilter, categoryFilter, collectionFilter]);
+  }, [search, skuFilter, categoryFilter, subCategoryFilter, collectionFilter]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  const { categories, materials, metalFinishes, woodFinishes, collections } = useMemo(() => {
-    const cats = new Set<string>(), mats = new Set<string>(), mFins = new Set<string>(), wFins = new Set<string>(), cols = new Set<string>();
+  const { categories, subCategories, materials, metalFinishes, woodFinishes, collections } = useMemo(() => {
+    const cats = new Set<string>(), subCats = new Set<string>(), mats = new Set<string>(), mFins = new Set<string>(), wFins = new Set<string>(), cols = new Set<string>();
     products.forEach(p => {
       if (p.category) cats.add(p.category);
+      if (p.subCategory) subCats.add(p.subCategory);
       if (p.material) mats.add(p.material);
       if (p.metalFinish) mFins.add(p.metalFinish);
       if (p.woodFinish) wFins.add(p.woodFinish);
       if (p.collectionName) cols.add(p.collectionName);
     });
-    return { categories: Array.from(cats), materials: Array.from(mats), metalFinishes: Array.from(mFins), woodFinishes: Array.from(wFins), collections: Array.from(cols) };
+    return { categories: Array.from(cats), subCategories: Array.from(subCats), materials: Array.from(mats), metalFinishes: Array.from(mFins), woodFinishes: Array.from(wFins), collections: Array.from(cols) };
   }, [products]);
 
   // ─── Selection ─────────────────────────────────────────────────────────────
@@ -270,29 +274,8 @@ export default function AdminProducts() {
     const selected = products.filter(p => selectedIds.includes(p._id));
     if (!selected.length) return;
     const win = window.open('', '_blank'); if (!win) return;
-    let html = `<html><head><title>Bulk Labels</title><style>
-      body{font-family:Arial,sans-serif;padding:0;margin:0}
-      .lp{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;page-break-after:always}
-      .lc{border:2px solid #000;width:350px;padding:20px;text-align:center}
-      h1{font-size:20px;margin:0 0 10px}h2{font-size:14px;color:#555;margin:0 0 10px}
-      .price{font-size:24px;font-weight:bold;margin:10px 0}
-      ul{text-align:left;font-size:12px;padding-left:15px}
-      img{max-width:100%;max-height:200px;object-fit:contain;margin-bottom:10px}
-      @media print{.lp{height:100vh;page-break-after:always}}
-    </style></head><body>`;
-    selected.forEach(p => {
-      html += `<div class="lp"><div class="lc">
-        ${p.images?.[0] ? `<img src="${p.images[0]}" />` : ''}
-        <h1>${p.name}</h1><h2>SKU: ${p.sku || p._id.slice(-6).toUpperCase()}</h2>
-        <div class="price">USD ${p.sellingPrice.toFixed(2)}</div><ul>
-        ${p.material ? `<li>Material: ${p.material}</li>` : ''}
-        ${p.metalFinish ? `<li>Metal Finish: ${p.metalFinish}</li>` : ''}
-        ${p.woodFinish ? `<li>Wood Finish: ${p.woodFinish}</li>` : ''}
-        ${p.dimensions?.width ? `<li>Size: ${p.dimensions.width}x${p.dimensions.height}x${p.dimensions.depth} cm</li>` : ''}
-        </ul></div></div>`;
-    });
-    html += `<script>window.onload=()=>{window.print();window.close()}</script></body></html>`;
-    win.document.write(html); win.document.close();
+    win.document.write(generateLabelHTML(selected));
+    win.document.close();
   };
 
   // ─── Export Helpers ─────────────────────────────────────────────────────────
@@ -727,8 +710,10 @@ export default function AdminProducts() {
                 <option value="">Category</option>
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-              <select className="bg-white border border-gray-300 text-gray-700 text-sm rounded-full px-4 py-2 outline-none focus:ring-1 focus:ring-green-500 min-w-[120px] shadow-sm">
+              <select className="bg-white border border-gray-300 text-gray-700 text-sm rounded-full px-4 py-2 outline-none focus:ring-1 focus:ring-green-500 min-w-[120px] shadow-sm"
+                value={subCategoryFilter} onChange={e => setSubCategoryFilter(e.target.value)}>
                 <option value="">Sub Category</option>
+                {subCategories.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <select className="bg-white border border-gray-300 text-gray-700 text-sm rounded-full px-4 py-2 outline-none focus:ring-1 focus:ring-green-500 min-w-[120px] shadow-sm"
                 value={collectionFilter} onChange={e => setCollectionFilter(e.target.value)}>
@@ -744,9 +729,6 @@ export default function AdminProducts() {
             <div className="flex items-center space-x-3">
               <button onClick={() => setIsModalOpen(true)} className="flex items-center space-x-1 border border-gray-300 text-gray-700 bg-white px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50">
                 <Plus className="w-4 h-4 mr-1" /> Add Product
-              </button>
-              <button className="flex items-center space-x-1 border border-gray-300 text-gray-700 bg-white px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50">
-                <Filter className="w-4 h-4 mr-1" /> More Filters
               </button>
               <button className="flex items-center space-x-1 border border-gray-300 text-gray-700 bg-white px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50">
                 <ArrowUpDown className="w-4 h-4 mr-1" /> Recent first

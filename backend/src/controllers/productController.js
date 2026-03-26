@@ -5,10 +5,11 @@ const Product = require('../models/Product');
 // @access  Private (Admin + Buyer)
 const getProducts = async (req, res) => {
   try {
-    const { category, search, collectionName, sku } = req.query;
+    const { category, subCategory, search, collectionName, sku } = req.query;
     let query = {};
 
     if (category) query.category = category;
+    if (subCategory) query.subCategory = subCategory;
     if (collectionName) query.collectionName = collectionName;
     if (sku) query.sku = { $regex: sku, $options: 'i' };
 
@@ -45,13 +46,11 @@ const getProductById = async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
     
-    // Fetch prev/next products by createdAt ensuring no crash on old unsaved dates
-    let prevProduct = null;
-    let nextProduct = null;
-    if (product.createdAt) {
-      prevProduct = await Product.findOne({ createdAt: { $lt: product.createdAt } }).sort({ createdAt: -1 }).select('_id');
-      nextProduct = await Product.findOne({ createdAt: { $gt: product.createdAt } }).sort({ createdAt: 1 }).select('_id');
-    }
+    // Fetch prev/next products by _id to ensure strict ordering and avoid exact-timestamp collisions
+    // "prev" means structurally higher in the descending list (newer -> greater _id)
+    const prevProduct = await Product.findOne({ _id: { $gt: product._id } }).sort({ _id: 1 }).select('_id');
+    // "next" means structurally lower in the descending list (older -> smaller _id)
+    const nextProduct = await Product.findOne({ _id: { $lt: product._id } }).sort({ _id: -1 }).select('_id');
 
     const productPayload = {
       ...product.toObject(),

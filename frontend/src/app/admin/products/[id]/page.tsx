@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/axios';
 import { useRouter, useParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Trash2, DownloadCloud, Edit, Link as LinkIcon, Image as ImageIcon, X } from 'lucide-react';
+import { generateLabelHTML } from '@/lib/labelUtils';
 
 export default function ProductDetailsPage() {
   const [product, setProduct] = useState<any>(null);
@@ -109,39 +110,7 @@ export default function ProductDetailsPage() {
   const handleDownloadLabel = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${product.sku} - Label</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
-            .label-container { border: 2px solid #000; width: 350px; padding: 20px; margin: 0 auto; box-sizing: border-box; }
-            h1 { font-size: 22px; margin: 0 0 10px 0; }
-            h2 { font-size: 16px; color: #555; margin: 0 0 15px 0; }
-            .price { font-size: 26px; font-weight: bold; margin: 15px 0; }
-            ul { text-align: left; font-size: 14px; padding-left: 20px; margin-bottom: 0;}
-            img { max-width: 100%; max-height: 250px; object-fit: contain; margin-bottom: 15px; }
-          </style>
-        </head>
-        <body>
-          <div class="label-container">
-            ${product.images?.[0] ? `<img src="${product.images[0]}" />` : ''}
-            <h1>${product.name}</h1>
-            <h2>SKU: ${product.sku || product._id.slice(-6).toUpperCase()}</h2>
-            <div class="price">${product.sellingPrice_Currency || 'USD'} ${Number(product.sellingPrice || 0).toFixed(2)}</div>
-            <ul>
-               ${product.material ? `<li>Material: ${product.material}</li>` : ''}
-               ${product.metalFinish ? `<li>Metal Finish: ${product.metalFinish}</li>` : ''}
-               ${product.woodFinish ? `<li>Wood Finish: ${product.woodFinish}</li>` : ''}
-               ${product.sizeCM ? `<li>Size: ${product.sizeCM}</li>` : ''}
-            </ul>
-          </div>
-          <script>
-            window.onload = () => { window.print(); window.close(); }
-          </script>
-        </body>
-      </html>
-    `);
+    printWindow.document.write(generateLabelHTML([product]));
     printWindow.document.close();
   };
 

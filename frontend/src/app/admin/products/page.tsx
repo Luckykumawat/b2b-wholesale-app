@@ -11,6 +11,7 @@ interface Product {
   sku: string;
   basePrice: number;
   category: string;
+  subCategory?: string;
   material?: string;
   finish?: string;
   collectionName?: string;
@@ -28,6 +29,7 @@ export default function AdminProducts() {
   const [search, setSearch] = useState('');
   const [skuFilter, setSkuFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [subCategoryFilter, setSubCategoryFilter] = useState('');
   const [collectionFilter, setCollectionFilter] = useState('');
   
   // Modal State for Add Product
@@ -57,6 +59,7 @@ export default function AdminProducts() {
       if (search) query.append('search', search);
       if (skuFilter) query.append('sku', skuFilter);
       if (categoryFilter) query.append('category', categoryFilter);
+      if (subCategoryFilter) query.append('subCategory', subCategoryFilter);
       if (collectionFilter) query.append('collectionName', collectionFilter);
 
       const { data } = await api.get(`/products?${query.toString()}`);
@@ -70,22 +73,25 @@ export default function AdminProducts() {
 
   useEffect(() => {
     fetchProducts();
-  }, [search, skuFilter, categoryFilter, collectionFilter]);
+  }, [search, skuFilter, categoryFilter, subCategoryFilter, collectionFilter]);
 
   // Extract unique suggestions for filters & datalists
-  const { categories, materials, finishes, collections } = useMemo(() => {
+  const { categories, subCategories, materials, finishes, collections } = useMemo(() => {
     const cats = new Set<string>();
+    const subCats = new Set<string>();
     const mats = new Set<string>();
     const fins = new Set<string>();
     const cols = new Set<string>();
     products.forEach(p => {
       if (p.category) cats.add(p.category);
+      if (p.subCategory) subCats.add(p.subCategory);
       if (p.material) mats.add(p.material);
       if (p.finish) fins.add(p.finish);
       if (p.collectionName) cols.add(p.collectionName);
     });
     return {
       categories: Array.from(cats),
+      subCategories: Array.from(subCats),
       materials: Array.from(mats),
       finishes: Array.from(fins),
       collections: Array.from(cols)
@@ -177,8 +183,10 @@ export default function AdminProducts() {
 
                <select 
                   className="bg-white border border-gray-300 text-gray-700 text-sm rounded-full px-4 py-2 outline-none focus:ring-1 focus:ring-green-500"
+                  value={subCategoryFilter} onChange={e => setSubCategoryFilter(e.target.value)}
                >
                  <option value="">Sub Category</option>
+                 {subCategories.map(s => <option key={s} value={s}>{s}</option>)}
                </select>
 
                <select 
@@ -214,10 +222,6 @@ export default function AdminProducts() {
                <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="flex items-center space-x-2 bg-green-700 hover:bg-green-800 text-white px-5 py-2 rounded-full text-sm font-semibold transition-colors">
                   <Plus className="w-4 h-4" />
                   <span>Add Product</span>
-               </button>
-               <button className="flex items-center space-x-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors">
-                  <Filter className="w-4 h-4" />
-                  <span>More filters</span>
                </button>
                <button className="flex items-center space-x-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors">
                   <ArrowUpDown className="w-4 h-4" />

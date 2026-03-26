@@ -28,6 +28,19 @@ const catalogueSchema = new mongoose.Schema(
     customColumns: {
       type: [String],
       default: ['Image', 'Product ID', 'Variant ID', 'Category', 'Sub Category', 'Collection Name', 'Color', 'Material', 'Size (CM)', 'Product Name', 'Selling Price', 'Wood Finish'],
+    },
+    status: {
+      type: String,
+      enum: ['Draft', 'Active', 'Inactive'],
+      default: 'Active',
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    lastAccessed: {
+      type: Date,
+      default: Date.now,
     }
   },
   { timestamps: true }

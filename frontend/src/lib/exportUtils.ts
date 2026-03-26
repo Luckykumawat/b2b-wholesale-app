@@ -83,8 +83,8 @@ export async function generateExcelCatalog(products: ExportProduct[], name: stri
           extension: base64.includes('png') ? 'png' : 'jpeg',
         });
         sheet.addImage(imageId, {
-          tl: { col: 0, row: rowIndex - 1 },
-          br: { col: 1, row: rowIndex },
+          tl: { col: 0, row: rowIndex - 1 } as any,
+          br: { col: 1, row: rowIndex } as any,
           editAs: 'oneCell'
         });
       }
@@ -112,10 +112,10 @@ export async function generatePPTCatalog(products: ExportProduct[], title: strin
     const img2 = p.images?.[1] ? await urlToBase64(p.images[1]) : null;
     const img3 = p.images?.[2] ? await urlToBase64(p.images[2]) : null;
 
-    // Drawing Images on the left
-    if (img1) slide.addImage({ data: img1, x: 0.5, y: 0.5, w: 4.5, h: 3.5 });
-    if (img2) slide.addImage({ data: img2, x: 0.5, y: 4.1, w: 2.2, h: 1.2 });
-    if (img3) slide.addImage({ data: img3, x: 2.8, y: 4.1, w: 2.2, h: 1.2 });
+    // Drawing Images on the left in a square grid layout
+    if (img1) slide.addImage({ data: img1, x: 1.15, y: 0.25, w: 3.2, h: 3.2, sizing: { type: 'contain', w: 3.2, h: 3.2 } });
+    if (img2) slide.addImage({ data: img2, x: 1.15, y: 3.6, w: 1.5, h: 1.5, sizing: { type: 'contain', w: 1.5, h: 1.5 } });
+    if (img3) slide.addImage({ data: img3, x: 2.85, y: 3.6, w: 1.5, h: 1.5, sizing: { type: 'contain', w: 1.5, h: 1.5 } });
     if (!img1 && !img2 && !img3) {
       slide.addText("No Image Available", { x: 0.5, y: 2.5, w: 4.5, align: 'center', color: '999999' });
     }
@@ -125,7 +125,7 @@ export async function generatePPTCatalog(products: ExportProduct[], title: strin
     const size = p.dimensions?.width ? `${p.dimensions.width}X${p.dimensions.height}X${p.dimensions.depth}` : '-';
 
     // Structured text box on right
-    slide.addShape(pres.ShapeType.rect, { x: 5.5, y: 0.5, w: 4.0, h: 4.5, fill: 'FFFFFF', line: { color: 'E2E8F0', width: 1 } });
+    slide.addShape(pres.ShapeType.rect, { x: 5.5, y: 0.5, w: 4.0, h: 4.5, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 } });
     
     // Rows representation
     const textRows = [
