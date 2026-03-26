@@ -140,7 +140,7 @@ export default function CreateCatalogues() {
                 type="text" 
                 value={buyerCompany} onChange={e => setBuyerCompany(e.target.value)}
                 placeholder="Full name of buying company/agency" 
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#1B6F53]"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#1B6F53] text-gray-900"
               />
             </div>
             
@@ -152,7 +152,7 @@ export default function CreateCatalogues() {
                 type="email" 
                 value={buyerEmail} onChange={e => setBuyerEmail(e.target.value)}
                 placeholder="Enter buyer email" 
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#1B6F53]"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#1B6F53] text-gray-900"
               />
             </div>
 
@@ -164,7 +164,7 @@ export default function CreateCatalogues() {
                 type="text" 
                 value={catalogueName} onChange={e => setCatalogueName(e.target.value)}
                 placeholder="Catalogue name" 
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#1B6F53]"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#1B6F53] text-gray-900"
               />
             </div>
             

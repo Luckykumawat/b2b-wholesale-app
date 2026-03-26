@@ -39,8 +39,7 @@ export default function AdminSidebar() {
 
       <nav className="flex-1 space-y-1">
         {mainNav.map((item) => {
-          const isParentActive = item.name === 'Products' && (pathname.startsWith('/admin/products') || pathname.startsWith('/admin/manage-products'));
-          const isActive = pathname === item.href || isParentActive;
+          const isActive = pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href + '/'));
           return (
             <Link
               key={item.name}

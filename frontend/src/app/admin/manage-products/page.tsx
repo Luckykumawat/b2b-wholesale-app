@@ -133,6 +133,7 @@ export default function AdminProducts() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [subCategoryFilter, setSubCategoryFilter] = useState('');
   const [collectionFilter, setCollectionFilter] = useState('');
+  const [sortBy, setSortBy] = useState('Recent first');
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -210,6 +211,7 @@ export default function AdminProducts() {
       if (categoryFilter) query.append('category', categoryFilter);
       if (subCategoryFilter) query.append('subCategory', subCategoryFilter);
       if (collectionFilter) query.append('collectionName', collectionFilter);
+      if (sortBy) query.append('sortBy', sortBy);
       const { data } = await api.get(`/products?${query.toString()}`);
       setProducts(data);
     } catch (error) {
@@ -219,7 +221,7 @@ export default function AdminProducts() {
     }
   }, [search, skuFilter, categoryFilter, subCategoryFilter, collectionFilter]);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  useEffect(() => { fetchProducts(); }, [fetchProducts, sortBy]);
 
   const { categories, subCategories, materials, metalFinishes, woodFinishes, collections } = useMemo(() => {
     const cats = new Set<string>(), subCats = new Set<string>(), mats = new Set<string>(), mFins = new Set<string>(), wFins = new Set<string>(), cols = new Set<string>();
@@ -611,7 +613,7 @@ export default function AdminProducts() {
             <div className="flex items-center space-x-3 w-full lg:w-auto flex-1 max-w-2xl">
               <div className="relative flex-1 max-w-sm">
                 <input type="text" placeholder="Search here" value={search} onChange={e => setSearch(e.target.value)}
-                  className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-green-500" />
+                  className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-green-500 text-gray-900" />
                 <Search className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
               </div>
               <button className="flex items-center space-x-1 bg-indigo-100 text-indigo-700 font-semibold px-4 py-2.5 rounded-full text-sm">
@@ -723,16 +725,22 @@ export default function AdminProducts() {
               <div className="relative">
                 <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input type="text" placeholder="SKU" value={skuFilter} onChange={e => setSkuFilter(e.target.value)}
-                  className="pl-9 pr-4 py-2 border border-gray-300 rounded-full text-sm outline-none shadow-sm w-32" />
+                  className="pl-9 pr-4 py-2 border border-gray-300 rounded-full text-sm outline-none shadow-sm w-32 text-gray-900" />
               </div>
             </div>
             <div className="flex items-center space-x-3">
               <button onClick={() => setIsModalOpen(true)} className="flex items-center space-x-1 border border-gray-300 text-gray-700 bg-white px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50">
                 <Plus className="w-4 h-4 mr-1" /> Add Product
               </button>
-              <button className="flex items-center space-x-1 border border-gray-300 text-gray-700 bg-white px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50">
-                <ArrowUpDown className="w-4 h-4 mr-1" /> Recent first
-              </button>
+              <select 
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value)}
+                className="bg-white border border-gray-300 text-gray-900 text-sm rounded-full px-4 py-2 outline-none focus:ring-1 focus:ring-green-500 shadow-sm font-medium"
+              >
+                <option>Recent first</option>
+                <option>Product ID Asc</option>
+                <option>Product ID Desc</option>
+              </select>
             </div>
           </div>
         </div>
@@ -988,39 +996,39 @@ export default function AdminProducts() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
-                    <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                    <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Product ID / SKU</label>
-                    <input type="text" value={sku} onChange={e => setSku(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" placeholder="Auto if empty" />
+                    <input type="text" value={sku} onChange={e => setSku(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" placeholder="Auto if empty" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Variant ID</label>
-                    <input type="text" value={variantId} onChange={e => setVariantId(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                    <input type="text" value={variantId} onChange={e => setVariantId(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                    <input type="text" list="categoriesList" required value={category} onChange={e => setCategory(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                    <input type="text" list="categoriesList" required value={category} onChange={e => setCategory(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Sub Category</label>
-                    <input type="text" value={subCategory} onChange={e => setSubCategory(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                    <input type="text" value={subCategory} onChange={e => setSubCategory(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Collection</label>
-                    <input type="text" list="collectionsList" value={formCollectionName} onChange={e => setFormCollectionName(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                    <input type="text" list="collectionsList" value={formCollectionName} onChange={e => setFormCollectionName(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
-                    <input type="text" value={theme} onChange={e => setTheme(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                    <input type="text" value={theme} onChange={e => setTheme(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Season</label>
-                    <input type="text" value={season} onChange={e => setSeason(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                    <input type="text" value={season} onChange={e => setSeason(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                   </div>
                   <div className="md:col-span-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Search Keywords</label>
-                    <input type="text" value={searchKeywords} onChange={e => setSearchKeywords(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" placeholder="Comma separated keywords" />
+                    <input type="text" value={searchKeywords} onChange={e => setSearchKeywords(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" placeholder="Comma separated keywords" />
                   </div>
                 </div>
               </div>
@@ -1032,41 +1040,41 @@ export default function AdminProducts() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Selling Price *</label>
                     <div className="flex">
-                      <select value={sellingPriceCurrency} onChange={e => setSellingPriceCurrency(e.target.value)} className="px-2 border border-r-0 border-gray-200 rounded-l-xl bg-gray-50 text-xs outline-none">
+                      <select value={sellingPriceCurrency} onChange={e => setSellingPriceCurrency(e.target.value)} className="px-2 border border-r-0 border-gray-200 rounded-l-xl bg-gray-50 text-xs outline-none text-gray-900">
                         <option>USD</option><option>EUR</option><option>GBP</option>
                       </select>
-                      <input type="number" required min="0" step="0.01" value={sellingPrice} onChange={e => setSellingPrice(e.target.value)} className="w-full px-4 py-2 rounded-r-xl border border-gray-200 outline-none focus:border-green-500" />
+                      <input type="number" required min="0" step="0.01" value={sellingPrice} onChange={e => setSellingPrice(e.target.value)} className="w-full px-4 py-2 rounded-r-xl border border-gray-200 outline-none focus:border-green-500 text-gray-900" />
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                    <input type="text" value={sellingPriceUnit} onChange={e => setSellingPriceUnit(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500" placeholder="e.g. Per Piece" />
+                    <input type="text" value={sellingPriceUnit} onChange={e => setSellingPriceUnit(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 text-gray-900" placeholder="e.g. Per Piece" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">MOQ</label>
-                    <input type="number" min="1" value={moq} onChange={e => setMoq(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500" />
+                    <input type="number" min="1" value={moq} onChange={e => setMoq(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 text-gray-900" />
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Product Cost</label>
                     <div className="flex">
-                      <select value={productCostCurrency} onChange={e => setProductCostCurrency(e.target.value)} className="px-2 border border-r-0 border-gray-200 rounded-l-xl bg-gray-50 text-xs">
+                      <select value={productCostCurrency} onChange={e => setProductCostCurrency(e.target.value)} className="px-2 border border-r-0 border-gray-200 rounded-l-xl bg-gray-50 text-xs text-gray-900">
                         <option>USD</option><option>EUR</option>
                       </select>
-                      <input type="number" value={productCost} onChange={e => setProductCost(e.target.value)} className="w-full px-4 py-2 rounded-r-xl border border-gray-200 outline-none" />
+                      <input type="number" value={productCost} onChange={e => setProductCost(e.target.value)} className="w-full px-4 py-2 rounded-r-xl border border-gray-200 outline-none text-gray-900" />
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Name</label>
-                    <input type="text" value={vendorName} onChange={e => setVendorName(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" />
+                    <input type="text" value={vendorName} onChange={e => setVendorName(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Price</label>
                     <div className="flex">
-                      <select value={vendorPriceCurrency} onChange={e => setVendorPriceCurrency(e.target.value)} className="px-2 border border-r-0 border-gray-200 rounded-l-xl bg-gray-50 text-xs">
+                      <select value={vendorPriceCurrency} onChange={e => setVendorPriceCurrency(e.target.value)} className="px-2 border border-r-0 border-gray-200 rounded-l-xl bg-gray-50 text-xs text-gray-900">
                         <option>USD</option>
                       </select>
-                      <input type="number" value={vendorPrice} onChange={e => setVendorPrice(e.target.value)} className="w-full px-4 py-2 rounded-r-xl border border-gray-200 outline-none" />
+                      <input type="number" value={vendorPrice} onChange={e => setVendorPrice(e.target.value)} className="w-full px-4 py-2 rounded-r-xl border border-gray-200 outline-none text-gray-900" />
                     </div>
                   </div>
                 </div>
@@ -1078,43 +1086,43 @@ export default function AdminProducts() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Material</label>
-                    <input type="text" list="materialsList" value={material} onChange={e => setMaterial(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" />
+                    <input type="text" list="materialsList" value={material} onChange={e => setMaterial(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Metal Finish</label>
-                    <input type="text" list="metalFinishesList" value={metalFinish} onChange={e => setMetalFinish(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" />
+                    <input type="text" list="metalFinishesList" value={metalFinish} onChange={e => setMetalFinish(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Wood Finish</label>
-                    <input type="text" list="woodFinishesList" value={woodFinish} onChange={e => setWoodFinish(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" />
+                    <input type="text" list="woodFinishesList" value={woodFinish} onChange={e => setWoodFinish(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none text-gray-900" />
                   </div>
                   
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Size (CM Text)</label>
-                    <input type="text" value={sizeCM} onChange={e => setSizeCM(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" placeholder="e.g. 120 x 80 x 75" />
+                    <input type="text" value={sizeCM} onChange={e => setSizeCM(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none text-gray-900" placeholder="e.g. 120 x 80 x 75" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">CBM</label>
-                    <input type="number" step="0.001" value={cbm} onChange={e => setCbm(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" />
+                    <input type="number" step="0.001" value={cbm} onChange={e => setCbm(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
-                    <input type="number" value={stock} onChange={e => setStock(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" />
+                    <input type="number" value={stock} onChange={e => setStock(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none text-gray-900" />
                   </div>
 
                   <div className="md:col-span-4 grid grid-cols-3 gap-3 bg-gray-50 p-4 rounded-xl">
                     <div className="col-span-3 text-xs font-bold text-gray-500 uppercase">Loadability</div>
                     <div>
                       <label className="block text-[10px] font-bold text-gray-500 mb-1">20'ft</label>
-                      <input type="text" value={ft20} onChange={e => setFt20(e.target.value)} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm" />
+                      <input type="text" value={ft20} onChange={e => setFt20(e.target.value)} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-900" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-gray-500 mb-1">40'ft HC</label>
-                      <input type="text" value={ft40HC} onChange={e => setFt40HC(e.target.value)} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm" />
+                      <input type="text" value={ft40HC} onChange={e => setFt40HC(e.target.value)} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-900" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-gray-500 mb-1">40'ft GP</label>
-                      <input type="text" value={ft40GP} onChange={e => setFt40GP(e.target.value)} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm" />
+                      <input type="text" value={ft40GP} onChange={e => setFt40GP(e.target.value)} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-900" />
                     </div>
                   </div>
                 </div>
@@ -1126,23 +1134,23 @@ export default function AdminProducts() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Sampling Time</label>
-                    <input type="text" value={samplingTime} onChange={e => setSamplingTime(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" />
+                    <input type="text" value={samplingTime} onChange={e => setSamplingTime(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Production Time</label>
-                    <input type="text" value={productionTime} onChange={e => setProductionTime(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" />
+                    <input type="text" value={productionTime} onChange={e => setProductionTime(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Assembled / KD</label>
-                    <input type="text" value={assembledKD} onChange={e => setAssembledKD(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" />
+                    <input type="text" value={assembledKD} onChange={e => setAssembledKD(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Exclusive For</label>
-                    <input type="text" value={exclusiveFor} onChange={e => setExclusiveFor(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" />
+                    <input type="text" value={exclusiveFor} onChange={e => setExclusiveFor(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none text-gray-900" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
-                    <textarea value={remarks} onChange={e => setRemarks(e.target.value)} rows={2} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" />
+                    <textarea value={remarks} onChange={e => setRemarks(e.target.value)} rows={2} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none text-gray-900" />
                   </div>
                 </div>
               </div>

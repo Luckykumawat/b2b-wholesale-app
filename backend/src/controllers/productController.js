@@ -5,7 +5,7 @@ const Product = require('../models/Product');
 // @access  Private (Admin + Buyer)
 const getProducts = async (req, res) => {
   try {
-    const { category, subCategory, search, collectionName, sku } = req.query;
+    const { category, subCategory, search, collectionName, sku, sortBy } = req.query;
     let query = {};
 
     if (category) query.category = category;
@@ -20,7 +20,24 @@ const getProducts = async (req, res) => {
       ];
     }
 
-    const products = await Product.find(query).sort({ createdAt: -1 });
+    let sortOptions = { createdAt: -1 };
+    if (sortBy) {
+      switch (sortBy) {
+        case 'Recent first':
+          sortOptions = { createdAt: -1 };
+          break;
+        case 'Product ID Asc':
+          sortOptions = { sku: 1 };
+          break;
+        case 'Product ID Desc':
+          sortOptions = { sku: -1 };
+          break;
+      }
+    }
+
+    const products = await Product.find(query)
+      .sort(sortOptions)
+      .collation({ locale: 'en', numericOrdering: true });
     
     // Apply custom pricing if buyer
     if (req.user && req.user.role === 'buyer') {
@@ -103,6 +120,7 @@ const createProduct = async (req, res) => {
       stock,
       category,
       tags: (tags && typeof tags === 'string') ? JSON.parse(tags) : (tags || []),
+      sellingPrice: basePrice, // Map basePrice to sellingPrice
       images: images.filter(img => img && img.trim() !== '')
     });
 
@@ -128,6 +146,11 @@ const updateProduct = async (req, res) => {
     
     // Assign fields that are directly strings/numbers
     Object.assign(product, otherFields);
+    
+    // Map basePrice to sellingPrice if basePrice is provided
+    if (otherFields.basePrice !== undefined) {
+      product.sellingPrice = otherFields.basePrice;
+    }
     
     // Handle dimensions
     if (dimensions) {

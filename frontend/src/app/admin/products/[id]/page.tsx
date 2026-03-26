@@ -309,31 +309,31 @@ export default function ProductDetailsPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-2">
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Product Name *</label>
-                        <input type="text" required value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                        <input type="text" required value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53] text-gray-900" />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Product ID / SKU</label>
-                        <input type="text" value={editForm.sku} onChange={e => setEditForm({...editForm, sku: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                        <input type="text" value={editForm.sku} onChange={e => setEditForm({...editForm, sku: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53] text-gray-900" />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Variant ID</label>
-                        <input type="text" value={editForm.variantId} onChange={e => setEditForm({...editForm, variantId: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                        <input type="text" value={editForm.variantId} onChange={e => setEditForm({...editForm, variantId: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53] text-gray-900" />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Category *</label>
-                        <input type="text" required value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                        <input type="text" required value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53] text-gray-900" />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Sub Category</label>
-                        <input type="text" value={editForm.subCategory} onChange={e => setEditForm({...editForm, subCategory: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                        <input type="text" value={editForm.subCategory} onChange={e => setEditForm({...editForm, subCategory: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53] text-gray-900" />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Collection</label>
-                        <input type="text" value={editForm.collectionName} onChange={e => setEditForm({...editForm, collectionName: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                        <input type="text" value={editForm.collectionName} onChange={e => setEditForm({...editForm, collectionName: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53] text-gray-900" />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Season</label>
-                        <input type="text" value={editForm.season} onChange={e => setEditForm({...editForm, season: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                        <input type="text" value={editForm.season} onChange={e => setEditForm({...editForm, season: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53] text-gray-900" />
                       </div>
                     </div>
                   </div>
@@ -345,15 +345,15 @@ export default function ProductDetailsPage() {
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Selling Price *</label>
                         <div className="flex">
-                          <select value={editForm.sellingPrice_Currency} onChange={e => setEditForm({...editForm, sellingPrice_Currency: e.target.value})} className="px-1 border border-r-0 border-gray-200 rounded-l-lg bg-gray-50 text-[10px]">
+                          <select value={editForm.sellingPrice_Currency} onChange={e => setEditForm({...editForm, sellingPrice_Currency: e.target.value})} className="px-1 border border-r-0 border-gray-200 rounded-l-lg bg-gray-50 text-[10px] text-gray-900">
                             <option>USD</option><option>EUR</option>
                           </select>
-                          <input type="number" required step="0.01" value={editForm.sellingPrice} onChange={e => setEditForm({...editForm, sellingPrice: e.target.value})} className="w-full px-3 py-2 rounded-r-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                          <input type="number" required step="0.01" value={editForm.sellingPrice} onChange={e => setEditForm({...editForm, sellingPrice: e.target.value})} className="w-full px-3 py-2 rounded-r-lg border border-gray-200 outline-none focus:border-[#1B6F53] text-gray-900" />
                         </div>
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Stock Quantity *</label>
-                        <input type="number" required value={editForm.stock} onChange={e => setEditForm({...editForm, stock: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                        <input type="number" required value={editForm.stock} onChange={e => setEditForm({...editForm, stock: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53] text-gray-900" />
                       </div>
                     </div>
                   </div>
@@ -364,15 +364,15 @@ export default function ProductDetailsPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Material</label>
-                        <input type="text" value={editForm.material} onChange={e => setEditForm({...editForm, material: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                        <input type="text" value={editForm.material} onChange={e => setEditForm({...editForm, material: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53] text-gray-900" />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Metal Finish</label>
-                        <input type="text" value={editForm.metalFinish} onChange={e => setEditForm({...editForm, metalFinish: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                        <input type="text" value={editForm.metalFinish} onChange={e => setEditForm({...editForm, metalFinish: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53] text-gray-900" />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Wood Finish</label>
-                        <input type="text" value={editForm.woodFinish} onChange={e => setEditForm({...editForm, woodFinish: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53]" />
+                        <input type="text" value={editForm.woodFinish} onChange={e => setEditForm({...editForm, woodFinish: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-[#1B6F53] text-gray-900" />
                       </div>
                     </div>
                   </div>

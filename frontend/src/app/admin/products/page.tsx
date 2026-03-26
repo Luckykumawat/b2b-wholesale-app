@@ -30,6 +30,7 @@ export default function AdminProducts() {
   const [skuFilter, setSkuFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [subCategoryFilter, setSubCategoryFilter] = useState('');
+  const [sortBy, setSortBy] = useState('Recent first');
   const [collectionFilter, setCollectionFilter] = useState('');
   
   // Modal State for Add Product
@@ -61,6 +62,7 @@ export default function AdminProducts() {
       if (categoryFilter) query.append('category', categoryFilter);
       if (subCategoryFilter) query.append('subCategory', subCategoryFilter);
       if (collectionFilter) query.append('collectionName', collectionFilter);
+      if (sortBy) query.append('sortBy', sortBy);
 
       const { data } = await api.get(`/products?${query.toString()}`);
       setProducts(data);
@@ -73,7 +75,7 @@ export default function AdminProducts() {
 
   useEffect(() => {
     fetchProducts();
-  }, [search, skuFilter, categoryFilter, subCategoryFilter, collectionFilter]);
+  }, [search, skuFilter, categoryFilter, subCategoryFilter, collectionFilter, sortBy]);
 
   // Extract unique suggestions for filters & datalists
   const { categories, subCategories, materials, finishes, collections } = useMemo(() => {
@@ -203,7 +205,7 @@ export default function AdminProducts() {
                    type="text"
                    placeholder="Search Name..."
                    value={search} onChange={e => setSearch(e.target.value)}
-                   className="pl-9 pr-4 py-2 border border-gray-300 rounded-full text-sm outline-none focus:ring-1 focus:ring-green-500 w-32 md:w-40"
+                   className="pl-9 pr-4 py-2 border border-gray-300 rounded-full text-sm outline-none focus:ring-1 focus:ring-green-500 w-32 md:w-40 text-gray-900"
                  />
                </div>
                
@@ -213,7 +215,7 @@ export default function AdminProducts() {
                    type="text"
                    placeholder="Search SKU..."
                    value={skuFilter} onChange={e => setSkuFilter(e.target.value)}
-                   className="pl-9 pr-4 py-2 border border-gray-300 rounded-full text-sm outline-none focus:ring-1 focus:ring-green-500 w-32 md:w-36"
+                   className="pl-9 pr-4 py-2 border border-gray-300 rounded-full text-sm outline-none focus:ring-1 focus:ring-green-500 w-32 md:w-36 text-gray-900"
                  />
                </div>
             </div>
@@ -223,10 +225,14 @@ export default function AdminProducts() {
                   <Plus className="w-4 h-4" />
                   <span>Add Product</span>
                </button>
-               <button className="flex items-center space-x-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors">
-                  <ArrowUpDown className="w-4 h-4" />
-                  <span>Recent first</span>
-               </button>
+               <select 
+                  className="bg-white border border-gray-300 text-gray-900 text-sm rounded-full px-4 py-2 outline-none focus:ring-1 focus:ring-green-500 font-medium"
+                  value={sortBy} onChange={e => setSortBy(e.target.value)}
+               >
+                 <option>Recent first</option>
+                 <option>Product ID Asc</option>
+                 <option>Product ID Desc</option>
+               </select>
             </div>
          </div>
          
@@ -295,20 +301,20 @@ export default function AdminProducts() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-gray-100 pb-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
-                  <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                  <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                 </div>
                 <div>
                    <label className="block text-sm font-medium text-gray-700 mb-1">SKU (Auto-generated if empty)</label>
-                   <input type="text" value={sku} onChange={e => setSku(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" placeholder="e.g. SKU-12493" />
+                   <input type="text" value={sku} onChange={e => setSku(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" placeholder="e.g. SKU-12493" />
                 </div>
                 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                    <input type="text" list="categoriesList" required value={category} onChange={e => setCategory(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                    <input type="text" list="categoriesList" required value={category} onChange={e => setCategory(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea rows={1} value={description} onChange={e => setDescription(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 resize-none" />
+                    <textarea rows={1} value={description} onChange={e => setDescription(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 resize-none text-gray-900" />
                   </div>
                 </div>
               </div>
@@ -316,30 +322,30 @@ export default function AdminProducts() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-gray-100 pb-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Base Price ($) *</label>
-                  <input type="number" required min="0" step="0.01" value={basePrice} onChange={e => setBasePrice(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                  <input type="number" required min="0" step="0.01" value={basePrice} onChange={e => setBasePrice(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Stock Quantity *</label>
-                  <input type="number" required min="0" value={stock} onChange={e => setStock(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                  <input type="number" required min="0" value={stock} onChange={e => setStock(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">CBM (Cubic Meters)</label>
-                  <input type="number" step="0.001" value={cbm} onChange={e => setCbm(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                  <input type="number" step="0.001" value={cbm} onChange={e => setCbm(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                 </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-gray-100 pb-5">
                  <div>
                    <label className="block text-sm font-medium text-gray-700 mb-1">Material</label>
-                   <input type="text" list="materialsList" value={material} onChange={e => setMaterial(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                   <input type="text" list="materialsList" value={material} onChange={e => setMaterial(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                  </div>
                  <div>
                    <label className="block text-sm font-medium text-gray-700 mb-1">Finish</label>
-                   <input type="text" list="finishesList" value={finish} onChange={e => setFinish(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                   <input type="text" list="finishesList" value={finish} onChange={e => setFinish(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                  </div>
                  <div>
                    <label className="block text-sm font-medium text-gray-700 mb-1">Collection Name</label>
-                   <input type="text" list="collectionsList" value={formCollectionName} onChange={e => setFormCollectionName(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                   <input type="text" list="collectionsList" value={formCollectionName} onChange={e => setFormCollectionName(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                  </div>
               </div>
 
@@ -348,13 +354,13 @@ export default function AdminProducts() {
                    <label className="block text-sm font-medium text-gray-700 mb-1">Dimensions (cm)</label>
                  </div>
                  <div className="-mt-3">
-                   <input type="number" value={dimW} onChange={e => setDimW(e.target.value)} placeholder="Width" className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                   <input type="number" value={dimW} onChange={e => setDimW(e.target.value)} placeholder="Width" className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                  </div>
                  <div className="-mt-3">
-                   <input type="number" value={dimH} onChange={e => setDimH(e.target.value)} placeholder="Height" className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                   <input type="number" value={dimH} onChange={e => setDimH(e.target.value)} placeholder="Height" className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                  </div>
                  <div className="-mt-3">
-                   <input type="number" value={dimD} onChange={e => setDimD(e.target.value)} placeholder="Depth" className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" />
+                   <input type="number" value={dimD} onChange={e => setDimD(e.target.value)} placeholder="Depth" className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-gray-900" />
                  </div>
               </div>
 

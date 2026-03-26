@@ -128,14 +128,15 @@ const getCatalogues = async (req, res) => {
     // Sort Logic
     let sortOptions = { createdAt: -1 };
     if (sortBy) {
-      switch (sortBy) {
-        case 'Recently access':
+      const sortLower = sortBy.toLowerCase();
+      switch (sortLower) {
+        case 'recently access':
           sortOptions = { lastAccessed: -1 };
           break;
-        case 'Recently created':
+        case 'recently created':
           sortOptions = { createdAt: -1 };
           break;
-        case 'Name of buyer':
+        case 'name of buyer':
           sortOptions = { buyerCompany: 1 };
           break;
       }
@@ -146,13 +147,16 @@ const getCatalogues = async (req, res) => {
       .populate('createdBy', 'name email')
       .populate('products');
 
-    // Get Counts for Statuses
-    const allCatalogues = await Catalogue.find();
+    // Get Counts for Statuses (based on current filters except status itself)
+    const countQuery = { ...query };
+    delete countQuery.status;
+
+    const allFilteredCatalogues = await Catalogue.find(countQuery);
     const counts = {
-      Total: allCatalogues.length,
-      Draft: allCatalogues.filter(c => c.status === 'Draft').length,
-      Active: allCatalogues.filter(c => c.status === 'Active').length,
-      Inactive: allCatalogues.filter(c => c.status === 'Inactive').length,
+      Total: allFilteredCatalogues.length,
+      Draft: allFilteredCatalogues.filter(c => c.status === 'Draft').length,
+      Active: allFilteredCatalogues.filter(c => c.status === 'Active').length,
+      Inactive: allFilteredCatalogues.filter(c => c.status === 'Inactive').length,
     };
 
     res.json({ catalogues, counts });
