@@ -6,9 +6,11 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
   const mainNav = [
+    ...(user?.role === 'superadmin' ? [{ name: 'Master Dashboard', href: '/admin/master-dashboard', icon: LayoutGrid }] : []),
     { name: 'Dashboard', href: '/admin/dashboard', icon: Home },
     { name: 'Products', href: '/admin/products', icon: Package },
     { name: 'Manage Products', href: '/admin/manage-products', icon: Edit },

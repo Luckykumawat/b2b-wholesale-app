@@ -18,14 +18,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!isLoading) {
       if (!user) {
         router.push('/login');
-      } else if (user.role !== 'admin') {
+      } else if (user.role !== 'admin' && user.role !== 'superadmin') {
         router.push('/buyer/catalog');
       }
     }
   }, [user, isLoading, router]);
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  if (!user || user.role !== 'admin') return null;
+  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) return null;
 
   return (
     <div className="min-h-screen bg-[#F8F9F9] flex font-sans">

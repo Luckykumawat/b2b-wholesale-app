@@ -16,6 +16,7 @@ const createQuotation = async (req, res) => {
       buyer: buyerId,
       products,
       totalAmount,
+      createdBy: req.user._id
     });
 
     const createdQuotation = await quotation.save();
@@ -32,7 +33,7 @@ const getQuotations = async (req, res) => {
   try {
     let quotations;
     if (req.user.role === 'admin') {
-      quotations = await Quotation.find().populate('buyer', 'name email').populate('products.product', 'name');
+      quotations = await Quotation.find({ createdBy: req.user._id }).populate('buyer', 'name email').populate('products.product', 'name');
     } else {
       quotations = await Quotation.find({ buyer: req.user._id }).populate('products.product', 'name');
     }
@@ -53,6 +54,11 @@ const generatePDF = async (req, res) => {
 
     if (!quotation) {
       return res.status(404).json({ message: 'Quotation not found' });
+    }
+
+    // Data Isolation Check
+    if (req.user.role === 'admin' && !quotation.createdBy.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to access this quotation' });
     }
 
     // Set headers for PDF download

@@ -23,7 +23,8 @@ const createOrder = async (req, res) => {
       })),
       totalAmount: quotation.totalAmount,
       shippingAddress: shippingAddress || quotation.buyer.companyDetails?.address,
-      status: 'pending'
+      status: 'pending',
+      createdBy: req.user._id
     });
 
     const createdOrder = await order.save();
@@ -45,7 +46,7 @@ const getOrders = async (req, res) => {
   try {
     let orders;
     if (req.user.role === 'admin') {
-      orders = await Order.find().populate('buyer', 'name email').populate('products.product', 'name');
+      orders = await Order.find({ createdBy: req.user._id }).populate('buyer', 'name email').populate('products.product', 'name');
     } else {
       orders = await Order.find({ buyer: req.user._id }).populate('products.product', 'name');
     }
@@ -62,6 +63,11 @@ const updateOrderStatus = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    // Data Isolation Check
+    if (req.user.role === 'admin' && !order.createdBy.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to update this order' });
+    }
 
     order.status = req.body.status || order.status;
     const updatedOrder = await order.save();

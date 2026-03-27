@@ -18,6 +18,7 @@ const orderSchema = new mongoose.Schema(
       default: 'pending',
     },
     shippingAddress: String,
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
 );

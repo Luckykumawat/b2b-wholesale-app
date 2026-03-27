@@ -17,6 +17,7 @@ const quotationSchema = new mongoose.Schema(
       default: 'draft',
     },
     pdfUrl: String, // Link to generated PDF
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
 );

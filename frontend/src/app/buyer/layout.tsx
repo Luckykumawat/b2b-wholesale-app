@@ -18,7 +18,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
     if (!isLoading) {
       if (!user) {
         router.push('/login');
-      } else if (user.role !== 'buyer') {
+      } else if (user.role !== 'buyer' && (user.role === 'admin' || user.role === 'superadmin')) {
         router.push('/admin/dashboard');
       }
     }

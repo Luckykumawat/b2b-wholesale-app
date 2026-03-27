@@ -35,6 +35,13 @@ const getCatalogues = async (req, res) => {
     const { buyer, user, status, createdOn, sortBy, search } = req.query;
     let query = {};
 
+    // Data Isolation
+    if (req.user.role === 'admin') {
+      query.createdBy = req.user._id;
+    } else if (req.user.role === 'buyer') {
+      query.createdBy = req.user.assignedAdmin;
+    }
+
     // Buyer Filter (Multi-select)
     if (buyer) {
       const buyers = Array.isArray(buyer) ? buyer : [buyer];
@@ -191,6 +198,11 @@ const updateCatalogue = async (req, res) => {
     const catalogue = await Catalogue.findById(req.params.id);
     if (!catalogue) return res.status(404).json({ message: 'Catalogue not found' });
 
+    // Data Isolation Check
+    if (req.user.role === 'admin' && catalogue.createdBy && !catalogue.createdBy.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to update this catalogue' });
+    }
+
     const { buyerCompany, buyerEmail, name, products, customColumns } = req.body;
     
     if (buyerCompany) catalogue.buyerCompany = buyerCompany;
@@ -206,9 +218,30 @@ const updateCatalogue = async (req, res) => {
   }
 };
 
+// @desc    Delete a catalogue
+// @route   DELETE /api/catalogues/:id
+// @access  Private
+const deleteCatalogue = async (req, res) => {
+  try {
+    const catalogue = await Catalogue.findById(req.params.id);
+    if (!catalogue) return res.status(404).json({ message: 'Catalogue not found' });
+
+    // Data Isolation Check
+    if (req.user.role === 'admin' && catalogue.createdBy && !catalogue.createdBy.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to delete this catalogue' });
+    }
+
+    await catalogue.deleteOne();
+    res.json({ message: 'Catalogue removed' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createCatalogue,
   getCatalogues,
   getCatalogueByToken,
-  updateCatalogue
+  updateCatalogue,
+  deleteCatalogue
 };

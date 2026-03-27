@@ -5,7 +5,7 @@ interface User {
   _id: string;
   name: string;
   email: string;
-  role: 'admin' | 'buyer';
+  role: 'admin' | 'buyer' | 'superadmin';
 }
 
 interface AuthState {
@@ -41,6 +41,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkAuth: async () => {
+    const { user, isLoading } = useAuthStore.getState();
+    // Only fetch if we don't have a user and we're not currently loading
+    // Or if we need to refresh (could add more complex logic here if needed)
+    if (user) {
+      set({ isLoading: false });
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       if (!token) {

@@ -205,7 +205,7 @@ export default function AdminProducts() {
                    type="text"
                    placeholder="Search Name..."
                    value={search} onChange={e => setSearch(e.target.value)}
-                   className="pl-9 pr-4 py-2 border border-gray-300 rounded-full text-sm outline-none focus:ring-1 focus:ring-green-500 w-32 md:w-40 text-gray-900"
+                   className="pl-9 pr-4 py-2 border border-gray-300 rounded-full text-sm outline-none focus:ring-1 focus:ring-green-500 w-32 md:w-40 text-gray-900 font-medium placeholder:text-gray-500"
                  />
                </div>
                

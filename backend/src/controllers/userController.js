@@ -6,7 +6,7 @@ const bcrypt = require('bcryptjs');
 // @access  Private/Admin
 const getBuyers = async (req, res) => {
   try {
-    const buyers = await User.find({ role: 'buyer' }).select('-password');
+    const buyers = await User.find({ role: 'buyer', assignedAdmin: req.user._id }).select('-password');
     res.json(buyers);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -85,4 +85,71 @@ const updateBuyer = async (req, res) => {
   }
 };
 
-module.exports = { getBuyers, createBuyer, updateBuyer };
+// @desc    Get all admin users (for superadmin)
+// @route   GET /api/users/admins
+// @access  Private/SuperAdmin
+const getAllUsers = async (req, res) => {
+  try {
+    const { name, email, phone, companyName, state, district, country } = req.query;
+    let query = { role: 'admin' };
+
+    if (name) query.name = { $regex: name, $options: 'i' };
+    if (email) query.email = { $regex: email, $options: 'i' };
+    if (phone) query.phone = { $regex: phone, $options: 'i' };
+    if (companyName) query.companyName = { $regex: companyName, $options: 'i' };
+    if (state) query.state = { $regex: state, $options: 'i' };
+    if (district) query.district = { $regex: district, $options: 'i' };
+    if (country) query.country = { $regex: country, $options: 'i' };
+
+    const users = await User.find(query).select('-password').sort({ createdAt: -1 });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Create new admin user (for superadmin)
+// @route   POST /api/users/admins
+// @access  Private/SuperAdmin
+const createAdminUser = async (req, res) => {
+  try {
+    const { 
+      name, email, password, phone, companyName, state, district, country 
+    } = req.body;
+    
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: 'admin',
+      phone,
+      companyName,
+      state,
+      district,
+      country
+    });
+
+    if (user) {
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      });
+    } else {
+      res.status(400).json({ message: 'Invalid user data' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getBuyers, createBuyer, updateBuyer, getAllUsers, createAdminUser };

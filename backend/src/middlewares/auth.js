@@ -25,4 +25,19 @@ const admin = (req, res, next) => {
   }
 };
 
-module.exports = { protect, admin };
+const superadmin = (req, res, next) => {
+  if (req.user && (req.user.role === 'superadmin' || req.user.role === 'admin')) {
+    // Note: If superadmin should be strictly higher, we can check just 'superadmin'
+    // But usually superadmin can do everything admin can.
+    // However, for the user management dashboard, it should probably be ONLY superadmin.
+    if (req.user.role === 'superadmin') {
+      next();
+    } else {
+      res.status(403).json({ message: 'Not authorized as a super admin' });
+    }
+  } else {
+    res.status(403).json({ message: 'Not authorized as a super admin' });
+  }
+};
+
+module.exports = { protect, admin, superadmin };

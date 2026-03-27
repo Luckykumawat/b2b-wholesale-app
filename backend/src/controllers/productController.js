@@ -13,6 +13,14 @@ const getProducts = async (req, res) => {
     if (collectionName) query.collectionName = collectionName;
     if (sku) query.sku = { $regex: sku, $options: 'i' };
 
+    // Data Isolation
+    if (req.user.role === 'admin') {
+      query.createdBy = req.user._id;
+    } else if (req.user.role === 'buyer') {
+      query.createdBy = req.user.assignedAdmin;
+    }
+    // superadmin sees all or can be restricted too, for now let them see all if they use this endpoint
+
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -62,6 +70,14 @@ const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    // Data Isolation Check
+    if (req.user.role === 'admin' && !product.createdBy.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to access this product' });
+    }
+    if (req.user.role === 'buyer' && !product.createdBy.equals(req.user.assignedAdmin)) {
+      return res.status(403).json({ message: 'Not authorized to access this product' });
+    }
     
     // Fetch prev/next products by _id to ensure strict ordering and avoid exact-timestamp collisions
     // "prev" means structurally higher in the descending list (newer -> greater _id)
@@ -121,7 +137,8 @@ const createProduct = async (req, res) => {
       category,
       tags: (tags && typeof tags === 'string') ? JSON.parse(tags) : (tags || []),
       sellingPrice: basePrice, // Map basePrice to sellingPrice
-      images: images.filter(img => img && img.trim() !== '')
+      images: images.filter(img => img && img.trim() !== ''),
+      createdBy: req.user._id
     });
 
     const createdProduct = await product.save();
@@ -138,6 +155,11 @@ const updateProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    // Data Isolation Check
+    if (req.user.role === 'admin' && product.createdBy && !product.createdBy.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to update this product' });
+    }
 
     console.log('Update Product Request Body:', req.body);
     console.log('Update Product Files:', req.files ? req.files.length : 0);
@@ -209,6 +231,11 @@ const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    // Data Isolation Check
+    if (req.user.role === 'admin' && product.createdBy && !product.createdBy.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to delete this product' });
+    }
 
     await product.deleteOne();
     res.json({ message: 'Product removed' });
@@ -303,7 +330,7 @@ const bulkImportProducts = async (req, res) => {
         variationHinge: row.variationHinge || '',
         description: row.description || '',
         images,
-        
+        createdBy: req.user._id,
         // Handle dimensions if provided as separate cols or object
         dimensions: row.dimensions ? row.dimensions : {
           width: row.width ? Number(row.width) : undefined,
@@ -351,7 +378,12 @@ const bulkDeleteProducts = async (req, res) => {
       return res.status(400).json({ message: 'No product IDs provided for deletion.' });
     }
 
-    const result = await Product.deleteMany({ _id: { $in: ids } });
+    const deleteQuery = { _id: { $in: ids } };
+    if (req.user.role === 'admin') {
+      deleteQuery.createdBy = req.user._id;
+    }
+
+    const result = await Product.deleteMany(deleteQuery);
     res.json({ message: `${result.deletedCount} products removed.` });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -364,8 +396,17 @@ const bulkDeleteProducts = async (req, res) => {
 const getRecommendations = async (req, res) => {
   try {
     const { categoryId } = req.params;
+    let query = { category: categoryId };
+
+    // Data Isolation
+    if (req.user.role === 'admin') {
+      query.createdBy = req.user._id;
+    } else if (req.user.role === 'buyer') {
+      query.createdBy = req.user.assignedAdmin;
+    }
+
     // Simple content-based recommendation matching category or tags
-    const products = await Product.find({ category: categoryId }).limit(5);
+    const products = await Product.find(query).limit(5);
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });

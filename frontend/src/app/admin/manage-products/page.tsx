@@ -613,7 +613,7 @@ export default function AdminProducts() {
             <div className="flex items-center space-x-3 w-full lg:w-auto flex-1 max-w-2xl">
               <div className="relative flex-1 max-w-sm">
                 <input type="text" placeholder="Search here" value={search} onChange={e => setSearch(e.target.value)}
-                  className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-green-500 text-gray-900" />
+                  className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-green-500 text-gray-900 font-medium placeholder:text-gray-500" />
                 <Search className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
               </div>
               <button className="flex items-center space-x-1 bg-indigo-100 text-indigo-700 font-semibold px-4 py-2.5 rounded-full text-sm">
@@ -725,7 +725,7 @@ export default function AdminProducts() {
               <div className="relative">
                 <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input type="text" placeholder="SKU" value={skuFilter} onChange={e => setSkuFilter(e.target.value)}
-                  className="pl-9 pr-4 py-2 border border-gray-300 rounded-full text-sm outline-none shadow-sm w-32 text-gray-900" />
+                  className="pl-9 pr-4 py-2 border border-gray-400 rounded-full text-sm outline-none shadow-sm w-32 text-gray-900 font-bold placeholder:text-gray-600" />
               </div>
             </div>
             <div className="flex items-center space-x-3">

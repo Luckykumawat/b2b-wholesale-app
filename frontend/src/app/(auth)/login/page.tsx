@@ -19,7 +19,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
       const user = useAuthStore.getState().user;
-      if (user?.role === 'admin') {
+      if (user?.role === 'admin' || user?.role === 'superadmin') {
         router.push('/admin/dashboard');
       } else {
         router.push('/buyer/catalog');

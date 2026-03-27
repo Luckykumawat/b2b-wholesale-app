@@ -67,6 +67,7 @@ const productSchema = new mongoose.Schema(
     remarks: String, // Remarks
     variationHinge: String, // Variation_hinge
     images: [{ type: String }], // Image URL(s)
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
 );
