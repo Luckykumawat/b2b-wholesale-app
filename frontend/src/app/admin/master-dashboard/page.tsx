@@ -16,6 +16,7 @@ interface AdminUser {
   district?: string;
   country?: string;
   createdAt: string;
+  productCount?: number;
 }
 
 export default function MasterDashboard() {
@@ -24,6 +25,10 @@ export default function MasterDashboard() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [userProducts, setUserProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  
   const [filters, setFilters] = useState({
     name: '',
     email: '',
@@ -52,6 +57,43 @@ export default function MasterDashboard() {
       fetchUsers();
     }
   }, [user, filters]);
+
+  useEffect(() => {
+    if (selectedUser) {
+      fetchUserProducts(selectedUser._id);
+    }
+  }, [selectedUser]);
+
+  const fetchUserProducts = async (userId: string) => {
+    try {
+      setLoadingProducts(true);
+      const { data } = await api.get(`/products?userId=${userId}`);
+      setUserProducts(data);
+    } catch (error) {
+      console.error('Error fetching user products:', error);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const calculateMemberFrom = (dateString: string) => {
+    const created = new Date(dateString);
+    const now = new Date();
+    
+    let years = now.getFullYear() - created.getFullYear();
+    let months = now.getMonth() - created.getMonth();
+    
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+    
+    const parts = [];
+    if (years > 0) parts.push(`${years} ${years === 1 ? 'Year' : 'Years'}`);
+    if (months > 0) parts.push(`${months} ${months === 1 ? 'Month' : 'Months'}`);
+    
+    return parts.join(', ') || 'Just joined';
+  };
 
   const fetchUsers = async () => {
     try {
@@ -197,13 +239,14 @@ export default function MasterDashboard() {
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Company</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Products</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     <div className="animate-pulse flex flex-col items-center">
                       <div className="w-8 h-8 bg-gray-200 rounded-full mb-2"></div>
                       <div className="h-4 w-32 bg-gray-200 rounded"></div>
@@ -212,38 +255,47 @@ export default function MasterDashboard() {
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500 font-medium">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500 font-medium">
                     No users found matching the filters.
                   </td>
                 </tr>
               ) : (
                 users.map((admin) => (
-                  <tr key={admin._id} className="hover:bg-gray-50 transition-colors">
+                  <tr 
+                    key={admin._id} 
+                    className="hover:bg-[#F1F5F9] transition-all cursor-pointer group"
+                    onClick={() => setSelectedUser(admin)}
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="w-8 h-8 bg-[#2E462D] rounded-full flex items-center justify-center text-white font-bold text-xs mr-3">
+                        <div className="w-10 h-10 bg-[#2E462D] rounded-xl flex items-center justify-center text-white font-bold text-sm mr-4 shadow-sm group-hover:scale-110 transition-transform">
                           {admin.name.charAt(0)}
                         </div>
                         <div>
-                          <div className="text-sm font-semibold text-gray-900">{admin.name}</div>
+                          <div className="text-sm font-bold text-gray-900 group-hover:text-[#1B6F53] transition-colors">{admin.name}</div>
                           <div className="text-xs text-gray-500">{admin.email}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{admin.companyName || 'N/A'}</div>
+                      <div className="text-sm font-medium text-gray-700">{admin.companyName || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-gray-600 font-medium">
                         {[admin.district, admin.state, admin.country].filter(Boolean).join(', ') || 'N/A'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm font-bold text-gray-900">
                       {admin.phone || 'N/A'}
                     </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="bg-blue-50 text-blue-700 text-xs font-black px-3 py-1 rounded-full border border-blue-100">
+                        {admin.productCount || 0}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center text-xs text-gray-500">
-                        <Calendar className="w-3 h-3 mr-1" />
+                      <div className="flex items-center text-xs text-gray-600 font-bold">
+                        <Calendar className="w-3.5 h-3.5 mr-2 text-gray-400" />
                         {new Date(admin.createdAt).toLocaleDateString()}
                       </div>
                     </td>
@@ -372,6 +424,129 @@ export default function MasterDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* User Details Modal */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl relative flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-[#2E462D] rounded-2xl flex items-center justify-center text-white font-bold text-xl mr-4 shadow-inner">
+                  {selectedUser.name.charAt(0)}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedUser.name}</h2>
+                  <p className="text-sm text-gray-500 font-medium">{selectedUser.email}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedUser(null)} 
+                className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column: Details */}
+                <div className="lg:col-span-1 space-y-8">
+                  <section>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Account Overview</h3>
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-xs text-gray-500 font-bold uppercase mb-1">Company</p>
+                        <p className="text-sm font-semibold text-gray-900">{selectedUser.companyName || 'N/A'}</p>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-xs text-gray-500 font-bold uppercase mb-1">Phone Number</p>
+                        <p className="text-sm font-semibold text-gray-900">{selectedUser.phone || 'N/A'}</p>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-xs text-gray-500 font-bold uppercase mb-1">Location</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {[selectedUser.district, selectedUser.state, selectedUser.country].filter(Boolean).join(', ') || 'N/A'}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-xs text-gray-500 font-bold uppercase mb-1">Password</p>
+                        <p className="text-sm font-mono font-medium text-gray-400 italic">•••••••• (Encrypted)</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Membership Stats</h3>
+                    <div className="bg-[#1B6F53]/5 border border-[#1B6F53]/10 p-5 rounded-2xl">
+                       <div className="flex items-center text-[#1B6F53] mb-3">
+                         <Calendar className="w-4 h-4 mr-2" />
+                         <span className="text-sm font-bold">Member Since</span>
+                       </div>
+                       <p className="text-lg font-black text-[#1B6F53]">
+                         {new Date(selectedUser.createdAt).toLocaleDateString('en-GB')}
+                       </p>
+                       <p className="text-xs font-bold text-[#2E462D] mt-1 opacity-70">
+                         {calculateMemberFrom(selectedUser.createdAt)}
+                       </p>
+                    </div>
+                  </section>
+                </div>
+
+                {/* Right Column: Products */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="flex justify-between items-center bg-white">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Uploaded Products ({selectedUser.productCount || 0})</h3>
+                    <div className="h-px flex-1 bg-gray-100 mx-4"></div>
+                  </div>
+
+                  {loadingProducts ? (
+                    <div className="py-20 text-center space-y-4">
+                      <div className="inline-block w-8 h-8 border-4 border-gray-200 border-t-[#1B6F53] rounded-full animate-spin"></div>
+                      <p className="text-sm text-gray-500 font-medium">Loading products...</p>
+                    </div>
+                  ) : userProducts.length === 0 ? (
+                    <div className="bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-200 py-20 text-center">
+                      <p className="text-gray-400 font-medium">No products uploaded yet.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {userProducts.map((product: any) => (
+                        <div key={product._id} className="flex bg-white p-3 rounded-2xl border border-gray-100 hover:shadow-md transition-all group">
+                          <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center mr-4 group-hover:scale-105 transition-transform overflow-hidden">
+                            {product.images?.[0] ? (
+                              <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Building2 className="w-6 h-6 text-gray-300" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <p className="text-sm font-bold text-gray-900 truncate">{product.name}</p>
+                            <div className="flex items-center text-[10px] font-bold text-gray-400 mt-1 uppercase">
+                              <span className="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded mr-2">{product.category}</span>
+                              <span className="truncate">SKU: {product.sku}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-8 py-6 border-t border-gray-100 flex justify-end bg-gray-50 rounded-b-3xl">
+              <button 
+                onClick={() => setSelectedUser(null)}
+                className="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-all active:scale-95 shadow-lg shadow-gray-200"
+              >
+                Close Details
+              </button>
+            </div>
           </div>
         </div>
       )}

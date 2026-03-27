@@ -18,6 +18,10 @@ const getProducts = async (req, res) => {
       query.createdBy = req.user._id;
     } else if (req.user.role === 'buyer') {
       query.createdBy = req.user.assignedAdmin;
+    } else if (req.user.role === 'superadmin') {
+      if (req.query.userId) {
+        query.createdBy = req.query.userId;
+      }
     }
     // superadmin sees all or can be restricted too, for now let them see all if they use this endpoint
 

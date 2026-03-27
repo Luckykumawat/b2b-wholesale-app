@@ -101,7 +101,26 @@ const getAllUsers = async (req, res) => {
     if (district) query.district = { $regex: district, $options: 'i' };
     if (country) query.country = { $regex: country, $options: 'i' };
 
-    const users = await User.find(query).select('-password').sort({ createdAt: -1 });
+    const pipeline = [
+      { $match: query },
+      {
+        $lookup: {
+          from: 'products',
+          localField: '_id',
+          foreignField: 'createdBy',
+          as: 'products'
+        }
+      },
+      {
+        $addFields: {
+          productCount: { $size: '$products' }
+        }
+      },
+      { $project: { password: 0, products: 0 } },
+      { $sort: { createdAt: -1 } }
+    ];
+
+    const users = await User.aggregate(pipeline);
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
