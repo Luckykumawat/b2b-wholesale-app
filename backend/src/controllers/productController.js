@@ -19,6 +19,7 @@ const getProducts = async (req, res) => {
     } else if (req.user.role === 'buyer') {
       query.createdBy = req.user.assignedAdmin;
     } else if (req.user.role === 'superadmin') {
+      // Superadmin can filter by userId if provided, otherwise see all
       if (req.query.userId) {
         query.createdBy = req.query.userId;
       }
