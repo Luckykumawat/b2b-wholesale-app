@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Plus, UserPlus, Building2, MapPin, Phone, Mail, Calendar, Filter, X } from 'lucide-react';
+import { Search, Plus, UserPlus, Building2, MapPin, Phone, Mail, Calendar, Filter, X, Edit2, Check, Save } from 'lucide-react';
 import api from '@/lib/axios';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
@@ -26,6 +26,8 @@ export default function MasterDashboard() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState<Partial<AdminUser>>({});
   const [userProducts, setUserProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   
@@ -61,6 +63,8 @@ export default function MasterDashboard() {
   useEffect(() => {
     if (selectedUser) {
       fetchUserProducts(selectedUser._id);
+      setEditData(selectedUser);
+      setIsEditing(false);
     }
   }, [selectedUser]);
 
@@ -123,6 +127,19 @@ export default function MasterDashboard() {
       fetchUsers();
     } catch (error: any) {
       alert(error.response?.data?.message || 'Error creating user');
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!selectedUser) return;
+    try {
+      const { data } = await api.put(`/users/admins/${selectedUser._id}`, editData);
+      setSelectedUser({ ...selectedUser, ...data });
+      setIsEditing(false);
+      fetchUsers();
+      alert('User profile updated successfully');
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error updating user');
     }
   };
 
@@ -439,16 +456,52 @@ export default function MasterDashboard() {
                   {selectedUser.name.charAt(0)}
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{selectedUser.name}</h2>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      className="text-2xl font-bold text-gray-900 border-b border-[#1B6F53] focus:outline-none"
+                      value={editData.name}
+                      onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                    />
+                  ) : (
+                    <h2 className="text-2xl font-bold text-gray-900">{selectedUser.name}</h2>
+                  )}
                   <p className="text-sm text-gray-500 font-medium">{selectedUser.email}</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setSelectedUser(null)} 
-                className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
-              >
-                <X className="w-6 h-6" />
-              </button>
+              <div className="flex items-center gap-2">
+                {isEditing ? (
+                  <>
+                    <button 
+                      onClick={handleUpdateUser}
+                      className="bg-[#1B6F53] text-white px-4 py-2 rounded-xl flex items-center text-sm font-bold shadow-sm hover:bg-[#155a43] transition-all"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Changes
+                    </button>
+                    <button 
+                      onClick={() => setIsEditing(false)}
+                      className="bg-gray-100 text-gray-600 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-200 transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    onClick={() => setIsEditing(true)}
+                    className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl flex items-center text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </button>
+                )}
+                <button 
+                  onClick={() => setSelectedUser(null)} 
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
@@ -460,21 +513,75 @@ export default function MasterDashboard() {
                     <div className="space-y-4">
                       <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
                         <p className="text-xs text-gray-500 font-bold uppercase mb-1">Company</p>
-                        <p className="text-sm font-semibold text-gray-900">{selectedUser.companyName || 'N/A'}</p>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            className="w-full text-sm font-semibold text-gray-900 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-[#1B6F53]"
+                            value={editData.companyName || ''}
+                            onChange={(e) => setEditData({ ...editData, companyName: e.target.value })}
+                          />
+                        ) : (
+                          <p className="text-sm font-semibold text-gray-900">{selectedUser.companyName || 'N/A'}</p>
+                        )}
                       </div>
                       <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
                         <p className="text-xs text-gray-500 font-bold uppercase mb-1">Phone Number</p>
-                        <p className="text-sm font-semibold text-gray-900">{selectedUser.phone || 'N/A'}</p>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            className="w-full text-sm font-semibold text-gray-900 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-[#1B6F53]"
+                            value={editData.phone || ''}
+                            onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                          />
+                        ) : (
+                          <p className="text-sm font-semibold text-gray-900">{selectedUser.phone || 'N/A'}</p>
+                        )}
                       </div>
                       <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                        <p className="text-xs text-gray-500 font-bold uppercase mb-1">Location</p>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {[selectedUser.district, selectedUser.state, selectedUser.country].filter(Boolean).join(', ') || 'N/A'}
-                        </p>
+                        <p className="text-xs text-gray-500 font-bold uppercase mb-1">Email</p>
+                        {isEditing ? (
+                          <input
+                            type="email"
+                            className="w-full text-sm font-semibold text-gray-900 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-[#1B6F53]"
+                            value={editData.email || ''}
+                            onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                          />
+                        ) : (
+                          <p className="text-sm font-semibold text-gray-900">{selectedUser.email}</p>
+                        )}
                       </div>
+                      
                       <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                        <p className="text-xs text-gray-500 font-bold uppercase mb-1">Password</p>
-                        <p className="text-sm font-mono font-medium text-gray-400 italic">•••••••• (Encrypted)</p>
+                        <p className="text-xs text-gray-500 font-bold uppercase mb-1">Location Details</p>
+                        {isEditing ? (
+                          <div className="space-y-2 mt-2">
+                            <input
+                              type="text"
+                              placeholder="District"
+                              className="w-full text-xs font-semibold text-gray-900 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-[#1B6F53]"
+                              value={editData.district || ''}
+                              onChange={(e) => setEditData({ ...editData, district: e.target.value })}
+                            />
+                            <input
+                              type="text"
+                              placeholder="State"
+                              className="w-full text-xs font-semibold text-gray-900 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-[#1B6F53]"
+                              value={editData.state || ''}
+                              onChange={(e) => setEditData({ ...editData, state: e.target.value })}
+                            />
+                            <input
+                              type="text"
+                              placeholder="Country"
+                              className="w-full text-xs font-semibold text-gray-900 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-[#1B6F53]"
+                              value={editData.country || ''}
+                              onChange={(e) => setEditData({ ...editData, country: e.target.value })}
+                            />
+                          </div>
+                        ) : (
+                          <p className="text-sm font-semibold text-gray-900">
+                            {[selectedUser.district, selectedUser.state, selectedUser.country].filter(Boolean).join(', ') || 'N/A'}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </section>

@@ -171,4 +171,44 @@ const createAdminUser = async (req, res) => {
   }
 };
 
-module.exports = { getBuyers, createBuyer, updateBuyer, getAllUsers, createAdminUser };
+// @desc    Update admin user (for superadmin)
+// @route   PUT /api/users/admins/:id
+// @access  Private/SuperAdmin
+const updateAdminUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (user && user.role === 'admin') {
+      user.name = req.body.name || user.name;
+      user.email = req.body.email || user.email;
+      user.phone = req.body.phone !== undefined ? req.body.phone : user.phone;
+      user.companyName = req.body.companyName !== undefined ? req.body.companyName : user.companyName;
+      user.state = req.body.state !== undefined ? req.body.state : user.state;
+      user.district = req.body.district !== undefined ? req.body.district : user.district;
+      user.country = req.body.country !== undefined ? req.body.country : user.country;
+
+      if (req.body.password) {
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(req.body.password, salt);
+      }
+
+      const updatedUser = await user.save();
+      res.json({
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        phone: updatedUser.phone,
+        companyName: updatedUser.companyName,
+        state: updatedUser.state,
+        district: updatedUser.district,
+        country: updatedUser.country
+      });
+    } else {
+      res.status(404).json({ message: 'Admin user not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getBuyers, createBuyer, updateBuyer, getAllUsers, createAdminUser, updateAdminUser };
