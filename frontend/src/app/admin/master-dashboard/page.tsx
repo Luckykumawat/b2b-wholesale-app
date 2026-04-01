@@ -17,6 +17,8 @@ interface AdminUser {
   country?: string;
   createdAt: string;
   productCount?: number;
+  status?: string;
+  plan?: string;
 }
 
 export default function MasterDashboard() {
@@ -49,7 +51,8 @@ export default function MasterDashboard() {
     companyName: '',
     state: '',
     district: '',
-    country: ''
+    country: '',
+    plan: 'free'
   });
 
   useEffect(() => {
@@ -122,7 +125,7 @@ export default function MasterDashboard() {
       setShowAddModal(false);
       setNewUser({
         name: '', email: '', password: '', phone: '',
-        companyName: '', state: '', district: '', country: ''
+        companyName: '', state: '', district: '', country: '', plan: 'free'
       });
       fetchUsers();
     } catch (error: any) {
@@ -253,6 +256,8 @@ export default function MasterDashboard() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">User Details</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Status</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Plan</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Company</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</th>
@@ -272,7 +277,7 @@ export default function MasterDashboard() {
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500 font-medium">
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500 font-medium">
                     No users found matching the filters.
                   </td>
                 </tr>
@@ -293,6 +298,14 @@ export default function MasterDashboard() {
                           <div className="text-xs text-gray-500">{admin.email}</div>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-full border ${admin.status === 'suspended' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-600 border-green-200'}`}>
+                        {admin.status === 'suspended' ? 'Suspended' : 'Active'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-xs font-black text-gray-700 uppercase tracking-wider bg-gray-100 px-3 py-1 rounded-full">{admin.plan || 'Free'}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-700">{admin.companyName || 'N/A'}</div>
@@ -422,6 +435,19 @@ export default function MasterDashboard() {
                     value={newUser.district}
                     onChange={(e) => setNewUser({...newUser, district: e.target.value})}
                   />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Subscription Plan</label>
+                  <select
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B6F53] focus:ring-1 focus:ring-[#1B6F53] transition-all text-sm text-gray-900 font-bold uppercase tracking-wider"
+                    value={newUser.plan || 'free'}
+                    onChange={(e) => setNewUser({...newUser, plan: e.target.value})}
+                  >
+                    <option value="free">Free Plan (10 Prod, 3 Cat)</option>
+                    <option value="base">Base Plan (15 Prod, 5 Cat)</option>
+                    <option value="premium">Premium Plan (20 Prod, 7 Cat)</option>
+                    <option value="gold">Gold Plan (Unlimited)</option>
+                  </select>
                 </div>
               </div>
 
@@ -582,6 +608,43 @@ export default function MasterDashboard() {
                             {[selectedUser.district, selectedUser.state, selectedUser.country].filter(Boolean).join(', ') || 'N/A'}
                           </p>
                         )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                          <p className="text-xs text-gray-500 font-bold uppercase mb-1">Status</p>
+                          {isEditing ? (
+                            <select
+                              className="w-full text-sm font-semibold text-gray-900 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-[#1B6F53]"
+                              value={editData.status || 'active'}
+                              onChange={(e) => setEditData({ ...editData, status: e.target.value })}
+                            >
+                              <option value="active">Active</option>
+                              <option value="suspended">Suspended</option>
+                            </select>
+                          ) : (
+                            <p className={`text-sm font-bold uppercase tracking-wider ${selectedUser.status === 'suspended' ? 'text-red-600' : 'text-green-600'}`}>
+                              {selectedUser.status === 'suspended' ? 'Suspended' : 'Active'}
+                            </p>
+                          )}
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                          <p className="text-xs text-gray-500 font-bold uppercase mb-1">Plan</p>
+                          {isEditing ? (
+                            <select
+                              className="w-full text-sm font-semibold text-gray-900 bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-[#1B6F53]"
+                              value={editData.plan || 'free'}
+                              onChange={(e) => setEditData({ ...editData, plan: e.target.value })}
+                            >
+                              <option value="free">Free</option>
+                              <option value="base">Base</option>
+                              <option value="premium">Premium</option>
+                              <option value="gold">Gold</option>
+                            </select>
+                          ) : (
+                            <p className="text-sm font-bold text-gray-900 uppercase tracking-wider">{selectedUser.plan || 'Free'}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </section>

@@ -2,15 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import api from '@/lib/axios';
-import { Search, ShoppingCart, Plus, Minus } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, Share2, FileText, Download, X, Image as ImageIcon } from 'lucide-react';
+import { generateExcelCatalog, generatePPTCatalog } from '@/lib/exportUtils';
 
 interface Product {
   _id: string;
   name: string;
+  sku?: string;
   customPrice: number;
   category: string;
   description: string;
   images: string[];
+  collectionName?: string;
+  material?: string;
+  finish?: string;
+  cbm?: string;
+  dimensions?: { width: number; height: number; depth: number };
 }
 
 export default function BuyerCatalog() {
@@ -18,6 +25,8 @@ export default function BuyerCatalog() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<{product: Product, quantity: number}[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -60,9 +69,9 @@ export default function BuyerCatalog() {
         products: cart.map(item => ({
           product: item.product._id,
           quantity: item.quantity,
-          quotedPrice: item.product.customPrice
+          quotedPrice: 0
         })),
-        totalAmount: cart.reduce((acc, item) => acc + (item.product.customPrice * item.quantity), 0)
+        totalAmount: 0
       };
       await api.post('/quotations', payload);
       alert('Quote requested successfully!');
@@ -73,7 +82,32 @@ export default function BuyerCatalog() {
     }
   };
 
-  const cartTotal = cart.reduce((acc, item) => acc + (item.product.customPrice * item.quantity), 0);
+  const handleExportExcel = async () => {
+    if (cart.length === 0) return;
+    const productsToExport = cart.map(c => ({...c.product, sku: c.product.sku || '', basePrice: 0}));
+    await generateExcelCatalog(productsToExport, 'My Shortlist', true);
+  };
+
+  const handleExportPPT = async () => {
+    if (cart.length === 0) return;
+    const productsToExport = cart.map(c => ({...c.product, sku: c.product.sku || '', basePrice: 0}));
+    await generatePPTCatalog(productsToExport, 'My Shortlist', '', true);
+  };
+
+  const handleShareCatalog = async () => {
+    if (cart.length === 0) return;
+    try {
+      const res = await api.post('/catalogues', {
+        name: `Shortlist - ${new Date().toLocaleDateString()}`,
+        products: cart.map(c => c.product._id)
+      });
+      const link = `${window.location.origin}/shared-catalog/${res.data.linkToken}`;
+      alert(`Catalogue generated successfully!\n\nShare this link:\n${link}`);
+    } catch (error) {
+       console.error('Failed to share catalogue', error);
+       alert('Failed to generate catalogue. Please try again.');
+    }
+  };
 
   return (
     <div className="flex flex-col lg:flex-row gap-8">
@@ -103,7 +137,11 @@ export default function BuyerCatalog() {
             {products.map((product) => {
               const inCart = cart.find(item => item.product._id === product._id);
               return (
-                <div key={product._id} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all group overflow-hidden relative">
+                <div 
+                  key={product._id} 
+                  onClick={() => { setSelectedProduct(product); setActiveImageIndex(0); }} 
+                  className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all group overflow-hidden relative cursor-pointer"
+                >
                   <div className="aspect-square bg-gray-50 rounded-2xl mb-6 relative flex items-center justify-center p-4">
                     {/* Placeholder for image */}
                     {product.images?.[0] ? (
@@ -118,20 +156,19 @@ export default function BuyerCatalog() {
                   
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{product.name}</h3>
-                    <p className="font-black text-xl text-blue-600">${product.customPrice?.toLocaleString()}</p>
                   </div>
                   
                   <p className="text-sm text-gray-500 line-clamp-2 mb-6">{product.description || 'No description available.'}</p>
                   
                   {inCart ? (
-                    <div className="flex items-center justify-between bg-blue-50 p-2 rounded-2xl text-blue-700 border border-blue-100">
-                      <button onClick={() => updateQuantity(product._id, -1)} className="p-2 hover:bg-blue-100 rounded-xl transition-colors active:scale-95"><Minus className="w-4 h-4" /></button>
+                    <div className="flex items-center justify-between bg-blue-50 p-2 rounded-2xl text-blue-700 border border-blue-100" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={(e) => { e.stopPropagation(); updateQuantity(product._id, -1); }} className="p-2 hover:bg-blue-100 rounded-xl transition-colors active:scale-95"><Minus className="w-4 h-4" /></button>
                       <span className="font-bold w-8 text-center">{inCart.quantity}</span>
-                      <button onClick={() => updateQuantity(product._id, 1)} className="p-2 hover:bg-blue-100 rounded-xl transition-colors active:scale-95"><Plus className="w-4 h-4" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); updateQuantity(product._id, 1); }} className="p-2 hover:bg-blue-100 rounded-xl transition-colors active:scale-95"><Plus className="w-4 h-4" /></button>
                     </div>
                   ) : (
                     <button 
-                      onClick={() => handleAddToCart(product)}
+                      onClick={(e) => { e.stopPropagation(); handleAddToCart(product); }}
                       className="w-full py-3 bg-gray-900 text-white rounded-2xl font-semibold hover:bg-blue-600 shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
                     >
                       Add to Quote
@@ -162,36 +199,110 @@ export default function BuyerCatalog() {
                 <div key={item.product._id} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100">
                   <div className="flex-1 min-w-0 pr-4">
                     <p className="text-sm font-bold text-gray-900 truncate">{item.product.name}</p>
-                    <p className="text-xs text-gray-500">${item.product.customPrice.toLocaleString()} x {item.quantity}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-gray-900">${(item.product.customPrice * item.quantity).toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                   </div>
                 </div>
               ))
             )}
           </div>
 
-          <div className="border-t border-gray-100 mt-6 pt-6 mb-8">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-500">Subtotal</span>
-              <span className="font-bold text-gray-900">${cartTotal.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-400">Shipping</span>
-              <span className="text-gray-500">Calculated later</span>
-            </div>
+          <div className="border-t border-gray-100 mt-6 pt-4 mb-6">
+            <p className="text-sm text-gray-500 text-center italic">Pricing will be provided by admin upon quote request.</p>
           </div>
 
-          <button 
-            disabled={cart.length === 0}
-            onClick={submitQuote}
-            className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 disabled:shadow-none transition-all active:scale-[0.98] disabled:cursor-not-allowed"
-          >
-            Request Quote
-          </button>
+          <div className="flex flex-col gap-3">
+            <button 
+              disabled={cart.length === 0}
+              onClick={submitQuote}
+              className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 disabled:shadow-none transition-all active:scale-[0.98] disabled:cursor-not-allowed"
+            >
+              Request Quote
+            </button>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              <button onClick={handleExportPPT} disabled={cart.length === 0} className="py-2 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-gray-600 transition-colors disabled:opacity-50 text-xs font-bold gap-1"><FileText className="w-4 h-4"/> PPT</button>
+              <button onClick={handleExportExcel} disabled={cart.length === 0} className="py-2 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-gray-600 transition-colors disabled:opacity-50 text-xs font-bold gap-1"><Download className="w-4 h-4"/> Excel</button>
+              <button onClick={handleShareCatalog} disabled={cart.length === 0} className="py-2 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-gray-600 transition-colors disabled:opacity-50 text-xs font-bold gap-1"><Share2 className="w-4 h-4"/> Share</button>
+            </div>
+          </div>
         </div>
       </div>
+
+      {selectedProduct && (
+        <div className="fixed inset-0 z-50 flex bg-white flex-col w-full h-full overflow-y-auto">
+          {/* Header */}
+          <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur-md z-10">
+            <h2 className="text-2xl font-extrabold text-gray-900">Product Details</h2>
+            <button onClick={() => setSelectedProduct(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <X className="w-6 h-6 text-gray-500" />
+            </button>
+          </div>
+          
+          <div className="flex-1 flex flex-col lg:flex-row gap-12 p-8 max-w-7xl mx-auto w-full">
+            {/* Images */}
+            <div className="flex-1">
+               <div className="aspect-square bg-gray-50 rounded-3xl p-8 mb-6 flex items-center justify-center border border-gray-100">
+                  {selectedProduct.images?.[activeImageIndex] ? (
+                    <img src={selectedProduct.images[activeImageIndex]} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply" />
+                  ) : (
+                    <ImageIcon className="w-20 h-20 text-gray-300" />
+                  )}
+               </div>
+               <div className="flex flex-wrap gap-4">
+                 {selectedProduct.images?.map((img, idx) => (
+                   <button 
+                     key={idx}
+                     onClick={() => setActiveImageIndex(idx)}
+                     className={`w-24 h-24 rounded-2xl border bg-gray-50 p-2 flex items-center justify-center overflow-hidden transition-all ${activeImageIndex === idx ? 'border-blue-600 ring-2 ring-blue-100' : 'border-gray-200 hover:border-gray-300'}`}
+                   >
+                     <img src={img} className="w-full h-full object-contain mix-blend-multiply" />
+                   </button>
+                 ))}
+               </div>
+            </div>
+
+            {/* Details & Actions */}
+            <div className="w-full lg:w-[450px] flex flex-col pt-4">
+               <div className="mb-2">
+                 <span className="bg-blue-50 text-blue-700 font-bold px-3 py-1 rounded-full text-xs uppercase tracking-wider">{selectedProduct.category}</span>
+               </div>
+               <h1 className="text-4xl font-extrabold text-gray-900 mb-2 leading-tight">{selectedProduct.name}</h1>
+               <p className="text-sm font-bold text-gray-400 tracking-wider mb-8">SKU: {selectedProduct.sku || selectedProduct._id.slice(-6).toUpperCase()}</p>
+               
+               <p className="text-gray-600 leading-relaxed mb-10">{selectedProduct.description || 'No description available for this product.'}</p>
+
+               <div className="grid grid-cols-2 gap-y-6 gap-x-4 mb-10">
+                 {selectedProduct.collectionName && (
+                   <div><p className="text-xs font-bold text-gray-400 uppercase">Collection</p><p className="font-semibold text-gray-900">{selectedProduct.collectionName}</p></div>
+                 )}
+                 {selectedProduct.material && (
+                   <div><p className="text-xs font-bold text-gray-400 uppercase">Material</p><p className="font-semibold text-gray-900">{selectedProduct.material}</p></div>
+                 )}
+                 {selectedProduct.finish && (
+                   <div><p className="text-xs font-bold text-gray-400 uppercase">Wood Finish</p><p className="font-semibold text-gray-900">{selectedProduct.finish}</p></div>
+                 )}
+                 {selectedProduct.dimensions && selectedProduct.dimensions.width && (
+                   <div><p className="text-xs font-bold text-gray-400 uppercase">Size (CM)</p><p className="font-semibold text-gray-900">{selectedProduct.dimensions.width}x{selectedProduct.dimensions.height}x{selectedProduct.dimensions.depth}</p></div>
+                 )}
+                 {selectedProduct.cbm && (
+                   <div><p className="text-xs font-bold text-gray-400 uppercase">CBM</p><p className="font-semibold text-gray-900">{selectedProduct.cbm}</p></div>
+                 )}
+               </div>
+
+               <div className="mt-auto">
+                 <button 
+                    onClick={() => { handleAddToCart(selectedProduct); setSelectedProduct(null); }}
+                    className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-blue-600 shadow-xl shadow-gray-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-lg"
+                 >
+                    <Plus className="w-5 h-5" />
+                    Add to Quote
+                 </button>
+                 <p className="text-center text-xs font-bold text-gray-400 mt-4 uppercase tracking-widest">Pricing provided upon request</p>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

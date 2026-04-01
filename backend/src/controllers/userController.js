@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const { logActivity } = require('./activityController');
 
 // @desc    Get all buyers
 // @route   GET /api/users
@@ -39,6 +40,7 @@ const createBuyer = async (req, res) => {
     });
 
     if (buyer) {
+      await logActivity(req.user._id, 'buyer_create', `Created buyer: ${buyer.name} (${buyer.email})`, { buyerId: buyer._id });
       res.status(201).json({
         _id: buyer._id,
         name: buyer.name,
@@ -133,7 +135,7 @@ const getAllUsers = async (req, res) => {
 const createAdminUser = async (req, res) => {
   try {
     const { 
-      name, email, password, phone, companyName, state, district, country 
+      name, email, password, phone, companyName, state, district, country, plan
     } = req.body;
     
     const userExists = await User.findOne({ email });
@@ -153,7 +155,8 @@ const createAdminUser = async (req, res) => {
       companyName,
       state,
       district,
-      country
+      country,
+      plan: plan || 'free'
     });
 
     if (user) {
@@ -162,6 +165,7 @@ const createAdminUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        plan: user.plan
       });
     } else {
       res.status(400).json({ message: 'Invalid user data' });
@@ -185,6 +189,8 @@ const updateAdminUser = async (req, res) => {
       user.state = req.body.state !== undefined ? req.body.state : user.state;
       user.district = req.body.district !== undefined ? req.body.district : user.district;
       user.country = req.body.country !== undefined ? req.body.country : user.country;
+      if (req.body.plan) user.plan = req.body.plan;
+      if (req.body.status) user.status = req.body.status;
 
       if (req.body.password) {
         const salt = await bcrypt.genSalt(10);
@@ -201,7 +207,9 @@ const updateAdminUser = async (req, res) => {
         companyName: updatedUser.companyName,
         state: updatedUser.state,
         district: updatedUser.district,
-        country: updatedUser.country
+        country: updatedUser.country,
+        plan: updatedUser.plan,
+        status: updatedUser.status
       });
     } else {
       res.status(404).json({ message: 'Admin user not found' });

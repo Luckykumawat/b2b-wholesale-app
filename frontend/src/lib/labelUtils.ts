@@ -1,4 +1,13 @@
+import api from '@/lib/axios';
+
 export const generateLabelHTML = (products: any[]) => {
+  // Fire off log asynchronously without blocking
+  api.post('/activity', {
+    action: 'label_create',
+    details: `Generated labels for ${products.length} products`,
+    meta: { count: products.length }
+  }).catch(console.error);
+
   let html = `<html>
     <head>
       <title>Product Labels</title>

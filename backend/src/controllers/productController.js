@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const { logActivity } = require('./activityController');
 
 // @desc    Get all products
 // @route   GET /api/products
@@ -122,6 +123,17 @@ const createProduct = async (req, res) => {
       images = req.files.map(file => req.protocol + '://' + req.get('host') + '/' + file.path.replace(/\\/g, '/'));
     }
 
+    if (req.user && req.user.role === 'admin') {
+      const planLimits = { free: 10, base: 15, premium: 20, gold: Infinity };
+      const userPlan = req.user.plan || 'free';
+      const limit = planLimits[userPlan];
+      
+      const currentCount = await Product.countDocuments({ createdBy: req.user._id });
+      if (currentCount >= limit) {
+        return res.status(403).json({ message: `Plan limit reached. Your ${userPlan} plan allows a maximum of ${limit} products.` });
+      }
+    }
+
     // auto generate sku if empty
     let finalSku = sku;
     if (!finalSku) {
@@ -147,6 +159,7 @@ const createProduct = async (req, res) => {
     });
 
     const createdProduct = await product.save();
+    await logActivity(req.user._id, 'product_add', `Added product: ${createdProduct.name} (SKU: ${createdProduct.sku})`, { productId: createdProduct._id });
     res.status(201).json(createdProduct);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -169,6 +182,7 @@ const updateProduct = async (req, res) => {
     console.log('Update Product Request Body:', req.body);
     console.log('Update Product Files:', req.files ? req.files.length : 0);
     
+    const originalProduct = product.toObject();
     const { images, remainingImages, dimensions, tags, ...otherFields } = req.body;
     
     // Assign fields that are directly strings/numbers
@@ -221,8 +235,39 @@ const updateProduct = async (req, res) => {
     // Ensure all image URLs are clean
     product.images = product.images.filter(img => img && typeof img === 'string' && img.trim() !== '');
 
-    console.log('Final product images before save:', product.images);
     const updatedProduct = await product.save();
+
+    // Determine what changed
+    const changedFields = [];
+    const fieldsToTrack = ['name', 'sku', 'category', 'basePrice', 'stock', 'material', 'finish', 'cbm', 'collectionName'];
+    
+    for (const field of fieldsToTrack) {
+      if (String(originalProduct[field] || '') !== String(updatedProduct[field] || '')) {
+        changedFields.push(field);
+      }
+    }
+    
+    // Also check dimensions
+    const formatDims = (d) => d ? `${d.width || ''}x${d.height || ''}x${d.depth || ''}` : '';
+    if (formatDims(originalProduct.dimensions) !== formatDims(updatedProduct.dimensions)) {
+      changedFields.push('dimensions');
+    }
+
+    // Also check images 
+    if (JSON.stringify(originalProduct.images || []) !== JSON.stringify(updatedProduct.images || [])) {
+      changedFields.push('images');
+    }
+
+    let detailStr = `Updated product: ${updatedProduct.name}`;
+    if (changedFields.length > 0) {
+      detailStr += ` (Changed: ${changedFields.join(', ')})`;
+    }
+
+    await logActivity(req.user._id, 'product_update', detailStr, { 
+      productId: updatedProduct._id,
+      changedFields
+    });
+
     res.json(updatedProduct);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -243,6 +288,7 @@ const deleteProduct = async (req, res) => {
     }
 
     await product.deleteOne();
+    await logActivity(req.user._id, 'product_delete', `Deleted product: ${product.name} (SKU: ${product.sku})`, { productId: product._id });
     res.json({ message: 'Product removed' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -368,6 +414,9 @@ const bulkImportProducts = async (req, res) => {
       skipped: errors.length + insertErrors.length,
       errors: [...errors, ...insertErrors],
     });
+    if (imported > 0) {
+      await logActivity(req.user._id, 'product_bulk_import', `Bulk imported ${imported} products`, { count: imported });
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -389,6 +438,7 @@ const bulkDeleteProducts = async (req, res) => {
     }
 
     const result = await Product.deleteMany(deleteQuery);
+    await logActivity(req.user._id, 'product_bulk_delete', `Bulk deleted ${result.deletedCount} products`, { count: result.deletedCount });
     res.json({ message: `${result.deletedCount} products removed.` });
   } catch (error) {
     res.status(500).json({ message: error.message });

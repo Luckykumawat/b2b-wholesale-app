@@ -6,13 +6,15 @@ interface User {
   name: string;
   email: string;
   role: 'admin' | 'buyer' | 'superadmin';
+  plan?: string;
+  status?: string;
 }
 
 interface AuthState {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, plan: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
@@ -23,8 +25,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: typeof window !== 'undefined' ? localStorage.getItem('token') : null,
   isLoading: true,
 
-  register: async (name, email, password) => {
-    const { data } = await api.post('/auth/register', { name, email, password });
+  register: async (name, email, password, plan) => {
+    const { data } = await api.post('/auth/register', { name, email, password, plan });
     localStorage.setItem('token', data.token);
     set({ user: data, token: data.token });
   },

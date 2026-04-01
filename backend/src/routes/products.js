@@ -16,7 +16,7 @@ const router = express.Router();
 
 router.route('/')
   .get(protect, getProducts)
-  .post(protect, admin, upload.array('images', 5), createProduct);
+  .post(protect, admin, upload.any(), createProduct);
 
 router.route('/recommendations/:categoryId')
   .get(protect, getRecommendations);
@@ -29,7 +29,7 @@ router.route('/bulk-delete')
 
 router.route('/:id')
   .get(protect, getProductById)
-  .put(protect, admin, upload.array('images', 5), updateProduct)
+  .put(protect, admin, upload.any(), updateProduct)
   .delete(protect, admin, deleteProduct);
 
 module.exports = router;

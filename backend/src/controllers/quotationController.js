@@ -32,8 +32,24 @@ const createQuotation = async (req, res) => {
 const getQuotations = async (req, res) => {
   try {
     let quotations;
-    if (req.user.role === 'admin') {
-      quotations = await Quotation.find({ createdBy: req.user._id }).populate('buyer', 'name email').populate('products.product', 'name');
+    if (req.user.role === 'admin' || req.user.role === 'superadmin') {
+      const User = require('../models/User');
+      
+      let query = {};
+      if (req.user.role === 'admin') {
+        const assignedBuyers = await User.find({ assignedAdmin: req.user._id }).select('_id');
+        const buyerIds = assignedBuyers.map(b => b._id);
+        query = {
+          $or: [
+            { createdBy: req.user._id },
+            { buyer: { $in: buyerIds } }
+          ]
+        };
+      }
+      
+      quotations = await Quotation.find(query)
+        .populate('buyer', 'name email companyDetails phone')
+        .populate('products.product', 'name sku images basePrice dimensions');
     } else {
       quotations = await Quotation.find({ buyer: req.user._id }).populate('products.product', 'name');
     }
@@ -57,8 +73,17 @@ const generatePDF = async (req, res) => {
     }
 
     // Data Isolation Check
-    if (req.user.role === 'admin' && !quotation.createdBy.equals(req.user._id)) {
-      return res.status(403).json({ message: 'Not authorized to access this quotation' });
+    if (req.user.role === 'admin') {
+      const User = require('../models/User');
+      const assignedBuyers = await User.find({ assignedAdmin: req.user._id }).select('_id');
+      const buyerIds = assignedBuyers.map(b => b._id.toString());
+      
+      const isCreator = quotation.createdBy.equals(req.user._id);
+      const isAssignedBuyer = quotation.buyer && buyerIds.includes(quotation.buyer._id.toString());
+      
+      if (!isCreator && !isAssignedBuyer) {
+        return res.status(403).json({ message: 'Not authorized to access this quotation' });
+      }
     }
 
     // Set headers for PDF download

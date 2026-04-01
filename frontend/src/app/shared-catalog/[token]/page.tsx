@@ -84,7 +84,7 @@ export default function SharedCatalog() {
       await generateExcelCatalog(data.products.map(p => ({
         ...p,
         basePrice: p.customPrice
-      })), data.name);
+      })), data.name, true);
     } catch (error) {
       console.error('Error exporting Excel', error);
     }
@@ -96,7 +96,7 @@ export default function SharedCatalog() {
       await generatePPTCatalog(data.products.map(p => ({
         ...p,
         basePrice: p.customPrice
-      })), data.name, data.buyerCompany);
+      })), data.name, data.buyerCompany, true);
     } catch (error) {
       console.error('Error exporting PPT', error);
     }
@@ -116,7 +116,6 @@ export default function SharedCatalog() {
         case 'Material': return product.material || 'N/A';
         case 'Wood Finish': return product.finish || 'N/A';
         case 'Size (CM)': return product.dimensions ? `${product.dimensions.width}X${product.dimensions.height}X${product.dimensions.depth}` : 'N/A';
-        case 'Selling Price': return `$ ${Number(product.customPrice || product.basePrice || 0).toFixed(2)}`;
         case 'CBM': return product.cbm || 'N/A';
         default: return null;
       }

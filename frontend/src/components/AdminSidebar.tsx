@@ -18,7 +18,7 @@ export default function AdminSidebar() {
     { name: 'Create Catalogues', href: '/admin/create-catalogues', icon: LayoutGrid },
     { name: 'Resource Library', href: '#', icon: Folder },
     { name: 'Buyers', href: '/admin/buyers', icon: Users },
-    { name: 'Invoices & Quotations', href: '#', icon: FileText },
+    { name: 'Quote Requests', href: '/admin/quotations', icon: FileText },
   ];
 
   const bottomNav = [

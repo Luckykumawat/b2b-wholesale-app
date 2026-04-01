@@ -7,7 +7,7 @@ const generateToken = (id) => {
 };
 
 const registerUser = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, plan } = req.body;
   try {
     const userExists = await User.findOne({ email });
     if (userExists) {
@@ -23,6 +23,7 @@ const registerUser = async (req, res) => {
       email,
       password: hashedPassword,
       role: 'admin',
+      plan: plan || 'free'
     });
 
     if (user) {
@@ -54,11 +55,17 @@ const loginUser = async (req, res) => {
     }
     
     if (user && (await bcrypt.compare(password, user.password))) {
+      if (user.status === 'suspended') {
+        return res.status(403).json({ message: 'Account is suspended. Please contact support.' });
+      }
+
       res.json({
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
+        plan: user.plan,
+        status: user.status,
         token: generateToken(user._id),
       });
     } else {
@@ -71,7 +78,8 @@ const loginUser = async (req, res) => {
 };
 
 const getMe = async (req, res) => {
-  res.json(req.user);
+  const user = await require('../models/User').findById(req.user._id).select('-password');
+  res.json(user);
 };
 
 module.exports = { registerUser, loginUser, getMe };

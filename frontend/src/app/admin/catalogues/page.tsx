@@ -5,6 +5,7 @@ import api from '@/lib/axios';
 import { Plus, Search, ExternalLink, DownloadCloud, Settings, Edit2, ChevronDown, CheckSquare, FileText, User as UserIcon, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import MultiSelectFilter from '@/components/admin/MultiSelectFilter';
+import { useAuthStore } from '@/store/useAuthStore';
 
 import { generateExcelCatalog, generatePPTCatalog, generatePDFCatalog } from '@/lib/exportUtils';
 
@@ -34,6 +35,7 @@ interface Catalogue {
 }
 
 export default function CataloguesPage() {
+  const { user } = useAuthStore();
   const [catalogues, setCatalogues] = useState<Catalogue[]>([]);
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState({ Total: 0, Draft: 0, Active: 0, Inactive: 0 });
@@ -311,13 +313,26 @@ export default function CataloguesPage() {
                                   <DownloadCloud className="w-4 h-4" />
                                </button>
                                
-                               {downloadDropdownOpen === cat._id && (
-                                 <div className="absolute right-0 top-10 w-44 bg-white border border-gray-100 shadow-xl rounded-lg py-1 z-20">
-                                    <button onClick={() => exportPPT(cat)} className="w-full text-left px-4 py-2.5 text-xs text-gray-700 hover:bg-gray-50 flex items-center font-semibold">
-                                       <FileText className="w-3.5 h-3.5 mr-2 text-red-500" /> Download PPT
+                             {downloadDropdownOpen === cat._id && (
+                                 <div className="absolute right-0 top-10 w-48 bg-white border border-gray-100 shadow-xl rounded-lg py-1 z-20">
+                                    <button onClick={() => exportPDF(cat)} className="w-full text-left px-4 py-2.5 text-xs text-gray-700 hover:bg-gray-50 flex items-center font-semibold">
+                                       <FileText className="w-3.5 h-3.5 mr-2 text-orange-600" /> Download PDF
                                     </button>
-                                    <button onClick={() => exportExcel(cat)} className="w-full text-left px-4 py-2.5 text-xs text-gray-700 hover:bg-gray-50 flex items-center font-semibold">
-                                       <CheckSquare className="w-3.5 h-3.5 mr-2 text-green-600" /> Download Excel
+                                    <button 
+                                      onClick={() => exportPPT(cat)} 
+                                      disabled={user?.plan === 'free'}
+                                      title={user?.plan === 'free' ? "Available on Paid Plans only" : ""}
+                                      className={`w-full text-left px-4 py-2.5 text-xs flex items-center font-semibold ${user?.plan === 'free' ? 'text-gray-400 bg-gray-50 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'}`}
+                                    >
+                                       <FileText className="w-3.5 h-3.5 mr-2 text-red-500 opacity-70" /> Download PPT
+                                    </button>
+                                    <button 
+                                      onClick={() => exportExcel(cat)} 
+                                      disabled={user?.plan === 'free'}
+                                      title={user?.plan === 'free' ? "Available on Paid Plans only" : ""}
+                                      className={`w-full text-left px-4 py-2.5 text-xs flex items-center font-semibold ${user?.plan === 'free' ? 'text-gray-400 bg-gray-50 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'}`}
+                                    >
+                                       <CheckSquare className="w-3.5 h-3.5 mr-2 text-green-600 opacity-70" /> Download Excel
                                     </button>
                                  </div>
                                )}

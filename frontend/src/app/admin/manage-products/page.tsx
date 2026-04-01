@@ -8,6 +8,7 @@ import {
   Upload, FileText, AlertCircle, CheckCircle2, Table2
 } from 'lucide-react';
 import Link from 'next/link';
+import { useAuthStore } from '@/store/useAuthStore';
 
 // Export Libraries
 import Papa from 'papaparse';
@@ -124,6 +125,7 @@ interface ParsedRow {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function AdminProducts() {
+  const { user } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -643,13 +645,23 @@ export default function AdminProducts() {
                     <button onClick={exportCSV} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5">
                       <FileText className="w-4 h-4 text-green-600" /> Export as CSV
                     </button>
-                    <button onClick={exportExcel} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5">
+                    <button 
+                      onClick={exportExcel} 
+                      disabled={user?.plan === 'free'}
+                      title={user?.plan === 'free' ? "Available on Paid Plans only" : ""}
+                      className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2.5 ${user?.plan === 'free' ? 'text-gray-400 cursor-not-allowed bg-gray-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                    >
                       <Table2 className="w-4 h-4 text-emerald-600" /> Export as Excel (.xlsx)
                     </button>
                     <button onClick={exportPDF} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5">
                       <FileText className="w-4 h-4 text-red-500" /> Export as PDF
                     </button>
-                    <button onClick={exportPPT} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5">
+                    <button 
+                      onClick={exportPPT} 
+                      disabled={user?.plan === 'free'}
+                      title={user?.plan === 'free' ? "Available on Paid Plans only" : ""}
+                      className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2.5 ${user?.plan === 'free' ? 'text-gray-400 cursor-not-allowed bg-gray-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                    >
                       <FileText className="w-4 h-4 text-orange-500" /> Export as PPT
                     </button>
 

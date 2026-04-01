@@ -1,5 +1,6 @@
 const Catalogue = require('../models/Catalogue');
 const crypto = require('crypto');
+const { logActivity } = require('./activityController');
 
 // @desc    Create a new catalogue
 // @route   POST /api/catalogues
@@ -11,7 +12,26 @@ const createCatalogue = async (req, res) => {
     // Generate unique link token
     const linkToken = crypto.randomBytes(4).toString('hex');
 
-    const catalogue = await Catalogue.create({
+    if (req.user && req.user.role === 'admin') {
+      const planLimits = { free: 3, base: 5, premium: 7, gold: Infinity };
+      const userPlan = req.user.plan || 'free';
+      const limit = planLimits[userPlan];
+      
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const currentCount = await Catalogue.countDocuments({ 
+        createdBy: req.user._id, 
+        createdAt: { $gte: startOfMonth }
+      });
+
+      if (currentCount >= limit) {
+        return res.status(403).json({ message: `Monthly limit reached. Your ${userPlan} plan allows a maximum of ${limit} catalogues per month.` });
+      }
+    }
+
+    let payload = {
       buyerCompany,
       buyerEmail,
       name,
@@ -19,8 +39,21 @@ const createCatalogue = async (req, res) => {
       customColumns,
       linkToken,
       createdBy: req.user?._id
-    });
+    };
 
+    if (req.user && req.user.role === 'buyer') {
+      payload.buyerCompany = req.user.companyName || req.user.name || 'Buyer';
+      payload.buyerEmail = req.user.email;
+      if (Array.isArray(payload.customColumns)) {
+        payload.customColumns = payload.customColumns.filter(c => c !== 'Selling Price' && c !== 'Base Price');
+      } else {
+        payload.customColumns = ['Image', 'Product ID', 'Category', 'Material', 'Size (CM)', 'Product Name'];
+      }
+    }
+
+    const catalogue = await Catalogue.create(payload);
+
+    await logActivity(req.user._id, 'catalogue_create', `Created catalogue: ${catalogue.name} for ${catalogue.buyerCompany || 'N/A'}`, { catalogueId: catalogue._id });
     res.status(201).json(catalogue);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -37,10 +70,21 @@ const getCatalogues = async (req, res) => {
 
     // Data Isolation
     if (req.user.role === 'admin') {
-      query.createdBy = req.user._id;
+      const User = require('../models/User');
+      const assignedBuyers = await User.find({ assignedAdmin: req.user._id }).select('_id');
+      const buyerIds = assignedBuyers.map(b => b._id);
+      
+      query.$or = [
+        { createdBy: req.user._id },
+        { createdBy: { $in: buyerIds } }
+      ];
     } else if (req.user.role === 'buyer') {
-      query.createdBy = req.user.assignedAdmin;
+      query.$or = [
+        { createdBy: req.user.assignedAdmin },
+        { createdBy: req.user._id }
+      ];
     }
+    // superadmin sees all, so no query restriction
 
     // Buyer Filter (Multi-select)
     if (buyer) {
@@ -232,6 +276,7 @@ const deleteCatalogue = async (req, res) => {
     }
 
     await catalogue.deleteOne();
+    await logActivity(req.user._id, 'catalogue_delete', `Deleted catalogue: ${catalogue.name}`, { catalogueId: catalogue._id });
     res.json({ message: 'Catalogue removed' });
   } catch (error) {
     res.status(500).json({ message: error.message });
