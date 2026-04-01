@@ -300,9 +300,27 @@ const deleteProduct = async (req, res) => {
 // @access  Private/Admin
 const bulkImportProducts = async (req, res) => {
   try {
-    const { products: rows } = req.body;
+    let { products: rows } = req.body;
     if (!Array.isArray(rows) || rows.length === 0) {
       return res.status(400).json({ message: 'No product rows provided.' });
+    }
+
+    let extraSkipped = 0;
+    if (req.user && req.user.role === 'admin') {
+      const planLimits = { free: 10, base: 15, premium: 20, gold: Infinity };
+      const userPlan = req.user.plan || 'free';
+      const limit = planLimits[userPlan];
+      
+      const currentCount = await Product.countDocuments({ createdBy: req.user._id });
+      if (currentCount + rows.length > limit) {
+        const allowed = Math.max(0, limit - currentCount);
+        if (allowed === 0) {
+          return res.status(403).json({ message: `Plan limit reached. Your ${userPlan} plan allows a maximum of ${limit} products.` });
+        } else {
+          extraSkipped = rows.length - allowed;
+          rows = rows.slice(0, allowed);
+        }
+      }
     }
 
     const toInsert = [];
@@ -411,7 +429,7 @@ const bulkImportProducts = async (req, res) => {
 
     res.json({
       imported,
-      skipped: errors.length + insertErrors.length,
+      skipped: errors.length + insertErrors.length + extraSkipped,
       errors: [...errors, ...insertErrors],
     });
     if (imported > 0) {

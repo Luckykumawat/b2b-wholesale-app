@@ -129,6 +129,18 @@ export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const getPlanLimit = (plan?: string) => {
+    switch(plan) {
+      case 'free': return 10;
+      case 'base': return 15;
+      case 'premium': return 20;
+      case 'gold': return Infinity;
+      default: return 10;
+    }
+  };
+  const planLimit = getPlanLimit(user?.plan);
+  const availableSlots = planLimit === Infinity ? Infinity : Math.max(0, planLimit - products.length);
+
   // Filters
   const [search, setSearch] = useState('');
   const [skuFilter, setSkuFilter] = useState('');
@@ -481,7 +493,8 @@ export default function AdminProducts() {
     if (validRows.length === 0) return;
     setImporting(true);
     try {
-      const payload = validRows.map(r => ({
+      const rowsToImport = availableSlots === Infinity ? validRows : validRows.slice(0, availableSlots);
+      const payload = rowsToImport.map(r => ({
         name: String(r.name).trim(),
         sku: r.sku ? String(r.sku).trim() : '',
         variantId: r.variantId || '',
@@ -580,7 +593,7 @@ export default function AdminProducts() {
       if (files) { for (let i = 0; i < files.length; i++) formData.append('images', files[i]); }
       await api.post('/products', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       setIsModalOpen(false); resetForm(); fetchProducts();
-    } catch { alert('Error creating product. Please check inputs.'); }
+    } catch (err: any) { alert(err.response?.data?.message || 'Error creating product. Please check inputs.'); }
     finally { setSubmitting(false); }
   };
   const resetForm = () => {
@@ -670,8 +683,10 @@ export default function AdminProducts() {
                     {/* Import Section */}
                     <div className="px-4 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">Import</div>
                     <button onClick={() => { setExportDropdownOpen(false); setImportModalOpen(true); }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 flex items-center gap-2.5 font-semibold text-indigo-700">
-                      <Upload className="w-4 h-4 text-indigo-600" /> Import Data (CSV / Excel)
+                      disabled={availableSlots <= 0}
+                      title={availableSlots <= 0 ? "Plan limit reached." : ""}
+                      className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2.5 font-semibold ${availableSlots <= 0 ? 'text-gray-400 bg-gray-50 cursor-not-allowed' : 'text-indigo-700 hover:bg-indigo-50'}`}>
+                      <Upload className={`w-4 h-4 ${availableSlots <= 0 ? 'text-gray-400' : 'text-indigo-600'}`} /> Import Data (CSV / Excel)
                     </button>
                     <button onClick={downloadTemplate} className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2.5">
                       <DownloadCloud className="w-4 h-4 text-gray-400" /> Download Template
@@ -741,7 +756,11 @@ export default function AdminProducts() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <button onClick={() => setIsModalOpen(true)} className="flex items-center space-x-1 border border-gray-300 text-gray-700 bg-white px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50">
+              <button 
+                 onClick={() => setIsModalOpen(true)} 
+                 disabled={availableSlots <= 0}
+                 title={availableSlots <= 0 ? "Plan limit reached." : ""}
+                 className={`flex items-center space-x-1 border px-4 py-2 rounded-full text-sm font-medium ${availableSlots <= 0 ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'}`}>
                 <Plus className="w-4 h-4 mr-1" /> Add Product
               </button>
               <select 
@@ -902,6 +921,16 @@ export default function AdminProducts() {
               {/* Preview Table */}
               {parsedRows.length > 0 && !importResult && (
                 <div>
+                  {validRows.length > availableSlots && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 flex gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-amber-800">
+                        <p className="font-bold">Plan Limit Warning</p>
+                        <p>You are trying to import {validRows.length} products, but your {user?.plan || 'free'} plan only allows {availableSlots} more product(s).</p>
+                        <p className="mt-1">If you proceed, we will only import the first {availableSlots} valid products and skip the rest.</p>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <h3 className="text-sm font-bold text-gray-900">{parsedRows.length} rows parsed</h3>

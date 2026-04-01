@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import api from '@/lib/axios';
 import { Plus, Filter, ArrowUpDown, X, Search, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface Product {
   _id: string;
@@ -22,6 +23,7 @@ interface Product {
 }
 
 export default function AdminProducts() {
+  const { user } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -132,9 +134,9 @@ export default function AdminProducts() {
       setIsModalOpen(false);
       resetForm();
       fetchProducts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to add product', error);
-      alert('Error creating product. Please check inputs.');
+      alert(error.response?.data?.message || 'Error creating product. Please check inputs.');
     } finally {
       setSubmitting(false);
     }
@@ -221,7 +223,11 @@ export default function AdminProducts() {
             </div>
             
             <div className="flex items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0">
-               <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="flex items-center space-x-2 bg-green-700 hover:bg-green-800 text-white px-5 py-2 rounded-full text-sm font-semibold transition-colors">
+               <button 
+                 onClick={() => { resetForm(); setIsModalOpen(true); }} 
+                 disabled={user?.plan === 'free' && products.length >= 10}
+                 title={(user?.plan === 'free' && products.length >= 10) ? "Free plan limit of 10 products reached." : ""}
+                 className={`flex items-center space-x-2 px-5 py-2 rounded-full text-sm font-semibold transition-colors ${user?.plan === 'free' && products.length >= 10 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800 text-white'}`}>
                   <Plus className="w-4 h-4" />
                   <span>Add Product</span>
                </button>
