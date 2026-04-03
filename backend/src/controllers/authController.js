@@ -32,6 +32,8 @@ const registerUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        plan: user.plan,
+        status: user.status || 'active',
         token: generateToken(user._id),
       });
     } else {

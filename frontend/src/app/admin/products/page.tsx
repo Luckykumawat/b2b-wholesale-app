@@ -26,6 +26,19 @@ export default function AdminProducts() {
   const { user } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const getPlanLimit = (plan?: string) => {
+    switch(plan) {
+      case 'free': return 10;
+      case 'base': return 15;
+      case 'premium': return 20;
+      case 'gold': return Infinity;
+      default: return 10;
+    }
+  };
+  
+  const planLimit = getPlanLimit(user?.plan);
+  const availableSlots = planLimit === Infinity ? Infinity : Math.max(0, planLimit - products.length);
   
   // Filters
   const [search, setSearch] = useState('');
@@ -225,9 +238,9 @@ export default function AdminProducts() {
             <div className="flex items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0">
                <button 
                  onClick={() => { resetForm(); setIsModalOpen(true); }} 
-                 disabled={user?.plan === 'free' && products.length >= 10}
-                 title={(user?.plan === 'free' && products.length >= 10) ? "Free plan limit of 10 products reached." : ""}
-                 className={`flex items-center space-x-2 px-5 py-2 rounded-full text-sm font-semibold transition-colors ${user?.plan === 'free' && products.length >= 10 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800 text-white'}`}>
+                 disabled={availableSlots <= 0}
+                 title={availableSlots <= 0 ? "Plan limit reached." : ""}
+                 className={`flex items-center space-x-2 px-5 py-2 rounded-full text-sm font-semibold transition-colors ${availableSlots <= 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800 text-white'}`}>
                   <Plus className="w-4 h-4" />
                   <span>Add Product</span>
                </button>
