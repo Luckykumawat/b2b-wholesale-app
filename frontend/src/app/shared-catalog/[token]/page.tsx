@@ -38,6 +38,15 @@ export default function SharedCatalog() {
   const [data, setData] = useState<CatalogData | null>(null);
   const [loading, setLoading] = useState(true);
   
+  // Security State
+  const [authRequirements, setAuthRequirements] = useState<any>(null);
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [passcodeInput, setPasscodeInput] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [otpInput, setOtpInput] = useState('');
+
   // Navigation & Detail View State
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -53,14 +62,48 @@ export default function SharedCatalog() {
           customPrice: p.customPrice || p.basePrice
         }));
         setData({ ...res.data, products: productsWithPrice });
-      } catch (error) {
-        console.error('Error fetching catalog', error);
+      } catch (error: any) {
+        if (error.response?.status === 401 || error.response?.status === 403) {
+           setAuthRequirements(error.response.data);
+        } else {
+          console.error('Error fetching catalog', error);
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchCatalog();
   }, [token]);
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      const payload: any = {};
+      if (passcodeInput) payload.passcode = passcodeInput;
+      if (emailInput) payload.email = emailInput;
+      if (phoneInput) payload.phone = phoneInput;
+      if (otpInput) payload.otp = otpInput;
+      
+      const res = await api.post(`/catalogues/link/${token}`, payload);
+      const productsWithPrice = res.data.products.map((p: any) => ({
+        ...p,
+        customPrice: p.customPrice || p.basePrice
+      }));
+      setData({ ...res.data, products: productsWithPrice });
+      setAuthRequirements(null); 
+    } catch (err: any) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+         setAuthRequirements(err.response.data);
+         setAuthError(err.response.data.message || 'Verification failed');
+      } else {
+         setAuthError('An unexpected error occurred');
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   const activeProduct = activeIndex !== null ? data?.products[activeIndex] : null;
 
@@ -103,7 +146,74 @@ export default function SharedCatalog() {
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-white font-medium text-gray-500 italic">Initializing catalog session...</div>;
-  if (!data) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-red-500 font-bold">Catalogue not found or link has expired.</div>;
+  if (!data && !authRequirements) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-red-500 font-bold">Catalogue not found or link has expired.</div>;
+
+  if (authRequirements) {
+    if (authRequirements.message && (authRequirements.message.includes('expired') || authRequirements.message.includes('inactive'))) {
+       return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-red-500 font-bold tracking-tight text-xl">{authRequirements.message}</div>;
+    }
+    
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 bg-cover bg-center relative" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=2000&q=80)' }}>
+         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+         <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+            <div className="p-8">
+               <div className="w-16 h-16 bg-[#F4F8F7] text-[#1B6F53] rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                 <Package className="w-8 h-8" />
+               </div>
+               <h2 className="text-2xl font-extrabold text-gray-900 text-center mb-2">{authRequirements.name || 'Catalogue Access'}</h2>
+               <p className="text-sm font-medium text-gray-500 text-center mb-8 leading-relaxed max-w-xs mx-auto">
+                 {authRequirements.message || 'Please verify your identity to view this catalog.'}
+               </p>
+               
+               {authError && <div className="mb-6 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-bold text-center border border-red-100">{authError}</div>}
+               
+               <form onSubmit={handleAuthSubmit} className="space-y-4">
+                 {authRequirements.requirePasscode && (
+                   <div>
+                     <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-2">
+                       <span>Enter 6-digit Passcode</span>
+                       <span className="text-red-500">*</span>
+                     </label>
+                     <input type="text" maxLength={6} required value={passcodeInput} onChange={e => setPasscodeInput(e.target.value)} className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-center text-lg tracking-[0.5em] font-black outline-none focus:border-[#1B6F53] transition-colors" placeholder="••••••" />
+                   </div>
+                 )}
+                 {authRequirements.requireEmail && (
+                   <div>
+                     <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-2">
+                       <span>Email Address</span>
+                       <span className="text-red-500">*</span>
+                     </label>
+                     <input type="email" required value={emailInput} onChange={e => setEmailInput(e.target.value)} className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:border-[#1B6F53] transition-colors" placeholder="buyer@example.com" />
+                   </div>
+                 )}
+                 {authRequirements.requirePhone && (
+                   <div>
+                     <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-2">
+                       <span>Phone Number</span>
+                       <span className="text-red-500">*</span>
+                     </label>
+                     <input type="tel" required value={phoneInput} onChange={e => setPhoneInput(e.target.value)} className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:border-[#1B6F53] transition-colors" placeholder="+1 (555) 000-0000" />
+                   </div>
+                 )}
+                 {(authRequirements.requireEmailOTP || authRequirements.requirePhoneOTP) && (authRequirements.message?.includes('Sent') || authRequirements.message?.includes('OTP')) && (
+                   <div>
+                     <label className="block text-sm font-bold text-gray-700 mb-1.5">Enter Verification Code</label>
+                     <input type="text" required value={otpInput} onChange={e => setOtpInput(e.target.value)} className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-center text-lg tracking-[0.3em] font-black outline-none focus:border-[#1B6F53] transition-colors" placeholder="000000" />
+                   </div>
+                 )}
+                 
+                 <button type="submit" disabled={authLoading} className="w-full mt-4 bg-[#1B6F53] hover:bg-[#14553F] text-white rounded-xl py-3.5 text-sm font-bold shadow-lg shadow-[#1B6F53]/20 transition-all disabled:opacity-50">
+                    {authLoading ? 'Verifying...' : 'Access Catalogue'}
+                 </button>
+               </form>
+            </div>
+         </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
 
   // Function to render attribute based on customColumns
   const renderAttribute = (product: Product, col: string) => {

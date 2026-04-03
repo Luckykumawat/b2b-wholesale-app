@@ -41,6 +41,17 @@ const catalogueSchema = new mongoose.Schema(
     lastAccessed: {
       type: Date,
       default: Date.now,
+    },
+    linkSettings: {
+      requireEmail: { type: Boolean, default: false },
+      requireEmailOTP: { type: Boolean, default: false },
+      emailAccessListMode: { type: String, enum: ['allow', 'block', 'none'], default: 'none' },
+      emailAccessList: { type: [String], default: [] },
+      requirePhone: { type: Boolean, default: false },
+      requirePhoneOTP: { type: Boolean, default: false },
+      expiresOn: { type: Date, default: null },
+      passcodeProtect: { type: Boolean, default: false },
+      passcode: { type: String, default: '' },
     }
   },
   { timestamps: true }

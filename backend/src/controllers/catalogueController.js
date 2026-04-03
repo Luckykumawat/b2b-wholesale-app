@@ -221,8 +221,81 @@ const getCatalogues = async (req, res) => {
 // @access  Public
 const getCatalogueByToken = async (req, res) => {
   try {
-    const catalogue = await Catalogue.findOne({ linkToken: req.params.token }).populate('products');
-    if (!catalogue) return res.status(404).json({ message: 'Catalogue not found' });
+    const catalogue = await Catalogue.findOne({ linkToken: req.params.token })
+      .populate('createdBy', 'name email')
+      .populate('products');
+
+    if (!catalogue) {
+      return res.status(404).json({ message: 'Catalogue not found' });
+    }
+
+    if (catalogue.status === 'Inactive') {
+      return res.status(403).json({ message: 'This catalogue is currently inactive.' });
+    }
+
+    if (catalogue.linkSettings && catalogue.linkSettings.expiresOn) {
+      if (new Date() > new Date(catalogue.linkSettings.expiresOn)) {
+        return res.status(403).json({ message: 'This catalogue link has expired.' });
+      }
+    }
+
+    const { linkSettings } = catalogue;
+
+    // Check passcode protection
+    if (linkSettings && linkSettings.passcodeProtect) {
+      const providedPasscode = req.body && req.body.passcode;
+      if (!providedPasscode || providedPasscode !== linkSettings.passcode) {
+         return res.status(401).json({ 
+           requirePasscode: true, 
+           message: providedPasscode ? 'Incorrect passcode.' : 'Passcode required to view this catalogue.',
+           name: catalogue.name
+         });
+      }
+    }
+
+    // Check Email protection
+    if (linkSettings && linkSettings.requireEmail) {
+      const providedEmail = req.body && req.body.email;
+      if (!providedEmail) {
+         return res.status(401).json({
+            requireEmail: true,
+            requireEmailOTP: linkSettings.requireEmailOTP,
+            message: 'Email verification required.',
+            name: catalogue.name
+         });
+      }
+      if (linkSettings.emailAccessListMode === 'allow' && !linkSettings.emailAccessList.includes(providedEmail)) {
+         return res.status(403).json({ message: 'Your email is not authorized to view this catalogue.' });
+      }
+      if (linkSettings.emailAccessListMode === 'block' && linkSettings.emailAccessList.includes(providedEmail)) {
+         return res.status(403).json({ message: 'Your email has been blocked from viewing this catalogue.' });
+      }
+      
+      // If OTP is required and wasn't provided/matched
+      if (linkSettings.requireEmailOTP && (!req.body.otp || req.body.otp !== '123456')) { // Hardcoded OTP for demo simulation
+         if (!req.body.requestOTP) {
+            return res.status(401).json({
+              requireEmail: true,
+              requireEmailOTP: true,
+              message: 'OTP Sent.',
+              name: catalogue.name
+            });
+         }
+      }
+    }
+
+    // Check Phone protection
+    if (linkSettings && linkSettings.requirePhone) {
+      const providedPhone = req.body && req.body.phone;
+      if (!providedPhone) {
+         return res.status(401).json({
+            requirePhone: true,
+            requirePhoneOTP: linkSettings.requirePhoneOTP,
+            message: 'Phone verification required.',
+            name: catalogue.name
+         });
+      }
+    }
     
     // Update lastAccessed
     catalogue.lastAccessed = new Date();
@@ -244,16 +317,21 @@ const updateCatalogue = async (req, res) => {
 
     // Data Isolation Check
     if (req.user.role === 'admin' && catalogue.createdBy && !catalogue.createdBy.equals(req.user._id)) {
-      return res.status(403).json({ message: 'Not authorized to update this catalogue' });
+      const User = require('../models/User');
+      const creator = await User.findById(catalogue.createdBy);
+      if (!creator || !creator.assignedAdmin || !creator.assignedAdmin.equals(req.user._id)) {
+        return res.status(403).json({ message: 'Not authorized to update this catalogue' });
+      }
     }
 
-    const { buyerCompany, buyerEmail, name, products, customColumns } = req.body;
+    const { buyerCompany, buyerEmail, name, products, customColumns, linkSettings } = req.body;
     
     if (buyerCompany) catalogue.buyerCompany = buyerCompany;
     if (buyerEmail !== undefined) catalogue.buyerEmail = buyerEmail;
     if (name) catalogue.name = name;
     if (products) catalogue.products = products;
     if (customColumns) catalogue.customColumns = customColumns;
+    if (linkSettings) catalogue.linkSettings = linkSettings;
 
     const updatedCatalogue = await catalogue.save();
     res.json(updatedCatalogue);
@@ -272,7 +350,11 @@ const deleteCatalogue = async (req, res) => {
 
     // Data Isolation Check
     if (req.user.role === 'admin' && catalogue.createdBy && !catalogue.createdBy.equals(req.user._id)) {
-      return res.status(403).json({ message: 'Not authorized to delete this catalogue' });
+      const User = require('../models/User');
+      const creator = await User.findById(catalogue.createdBy);
+      if (!creator || !creator.assignedAdmin || !creator.assignedAdmin.equals(req.user._id)) {
+        return res.status(403).json({ message: 'Not authorized to delete this catalogue' });
+      }
     }
 
     await catalogue.deleteOne();
@@ -283,10 +365,49 @@ const deleteCatalogue = async (req, res) => {
   }
 };
 
+// @desc    Copy an existing catalogue
+// @route   POST /api/catalogues/:id/copy
+// @access  Private
+const copyCatalogue = async (req, res) => {
+  try {
+    const originalCatalogue = await Catalogue.findById(req.params.id);
+    if (!originalCatalogue) return res.status(404).json({ message: 'Catalogue not found' });
+
+    // Isolation check
+    if (req.user.role === 'admin' && originalCatalogue.createdBy && !originalCatalogue.createdBy.equals(req.user._id)) {
+      const User = require('../models/User');
+      const creator = await User.findById(originalCatalogue.createdBy);
+      if (!creator || !creator.assignedAdmin || !creator.assignedAdmin.equals(req.user._id)) {
+        return res.status(403).json({ message: 'Not authorized to copy this catalogue' });
+      }
+    }
+
+    const { name, buyerCompany, buyerEmail } = req.body;
+    
+    const linkToken = crypto.randomBytes(4).toString('hex');
+    
+    const newCatalogue = await Catalogue.create({
+      buyerCompany: buyerCompany || originalCatalogue.buyerCompany,
+      buyerEmail: buyerEmail !== undefined ? buyerEmail : originalCatalogue.buyerEmail,
+      name: name || originalCatalogue.name + ' - Copy',
+      products: originalCatalogue.products,
+      customColumns: originalCatalogue.customColumns,
+      linkToken,
+      createdBy: req.user._id
+    });
+    
+    await logActivity(req.user._id, 'catalogue_copy', `Copied catalogue: ${newCatalogue.name}`, { catalogueId: newCatalogue._id });
+    res.status(201).json(newCatalogue);
+  } catch(error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createCatalogue,
   getCatalogues,
   getCatalogueByToken,
   updateCatalogue,
-  deleteCatalogue
+  deleteCatalogue,
+  copyCatalogue
 };

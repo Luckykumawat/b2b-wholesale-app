@@ -237,18 +237,43 @@ export default function AdminProducts() {
 
   useEffect(() => { fetchProducts(); }, [fetchProducts, sortBy]);
 
-  const { categories, subCategories, materials, metalFinishes, woodFinishes, collections } = useMemo(() => {
-    const cats = new Set<string>(), subCats = new Set<string>(), mats = new Set<string>(), mFins = new Set<string>(), wFins = new Set<string>(), cols = new Set<string>();
-    products.forEach(p => {
-      if (p.category) cats.add(p.category);
-      if (p.subCategory) subCats.add(p.subCategory);
-      if (p.material) mats.add(p.material);
-      if (p.metalFinish) mFins.add(p.metalFinish);
-      if (p.woodFinish) wFins.add(p.woodFinish);
-      if (p.collectionName) cols.add(p.collectionName);
+  const [filterOptions, setFilterOptions] = useState({
+    categories: new Set<string>(),
+    subCategories: new Set<string>(),
+    materials: new Set<string>(),
+    metalFinishes: new Set<string>(),
+    woodFinishes: new Set<string>(),
+    collections: new Set<string>()
+  });
+
+  useEffect(() => {
+    setFilterOptions(prev => {
+      const next = {
+        categories: new Set(prev.categories),
+        subCategories: new Set(prev.subCategories),
+        materials: new Set(prev.materials),
+        metalFinishes: new Set(prev.metalFinishes),
+        woodFinishes: new Set(prev.woodFinishes),
+        collections: new Set(prev.collections)
+      };
+      products.forEach(p => {
+        if (p.category) next.categories.add(p.category);
+        if (p.subCategory) next.subCategories.add(p.subCategory);
+        if (p.material) next.materials.add(p.material);
+        if (p.metalFinish) next.metalFinishes.add(p.metalFinish);
+        if (p.woodFinish) next.woodFinishes.add(p.woodFinish);
+        if (p.collectionName) next.collections.add(p.collectionName);
+      });
+      return next;
     });
-    return { categories: Array.from(cats), subCategories: Array.from(subCats), materials: Array.from(mats), metalFinishes: Array.from(mFins), woodFinishes: Array.from(wFins), collections: Array.from(cols) };
   }, [products]);
+
+  const categories = Array.from(filterOptions.categories);
+  const subCategories = Array.from(filterOptions.subCategories);
+  const materials = Array.from(filterOptions.materials);
+  const metalFinishes = Array.from(filterOptions.metalFinishes);
+  const woodFinishes = Array.from(filterOptions.woodFinishes);
+  const collections = Array.from(filterOptions.collections);
 
   // ─── Selection ─────────────────────────────────────────────────────────────
   const toggleSelectAll = () => {

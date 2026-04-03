@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import api from '@/lib/axios';
-import { Plus, Search, ExternalLink, DownloadCloud, Settings, Edit2, ChevronDown, CheckSquare, FileText, User as UserIcon, Calendar } from 'lucide-react';
+import { Plus, Search, ExternalLink, DownloadCloud, Settings, Edit2, ChevronDown, CheckSquare, FileText, User as UserIcon, Calendar, X } from 'lucide-react';
 import Link from 'next/link';
 import MultiSelectFilter from '@/components/admin/MultiSelectFilter';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -24,6 +24,18 @@ interface Product {
   cbm?: string;
 }
 
+interface LinkSettings {
+  requireEmail?: boolean;
+  requireEmailOTP?: boolean;
+  emailAccessListMode?: string;
+  emailAccessList?: string[];
+  requirePhone?: boolean;
+  requirePhoneOTP?: boolean;
+  expiresOn?: string | null;
+  passcodeProtect?: boolean;
+  passcode?: string;
+}
+
 interface Catalogue {
   _id: string;
   name: string;
@@ -32,6 +44,8 @@ interface Catalogue {
   products: Product[];
   linkToken: string;
   createdAt: string;
+  status?: string;
+  linkSettings?: LinkSettings;
 }
 
 export default function CataloguesPage() {
@@ -54,6 +68,113 @@ export default function CataloguesPage() {
   
   // Dropdown States
   const [downloadDropdownOpen, setDownloadDropdownOpen] = useState<string | null>(null);
+  
+  // Settings Sidebar States
+  const [settingsSidebarCat, setSettingsSidebarCat] = useState<Catalogue | null>(null);
+  const [securityModalCat, setSecurityModalCat] = useState<Catalogue | null>(null);
+
+  // Link Security Form State
+  const [secLoading, setSecLoading] = useState(false);
+  const [requireEmail, setRequireEmail] = useState(false);
+  const [requireEmailOTP, setRequireEmailOTP] = useState(false);
+  const [emailAccessListMode, setEmailAccessListMode] = useState('none');
+  const [requirePhone, setRequirePhone] = useState(false);
+  const [requirePhoneOTP, setRequirePhoneOTP] = useState(false);
+  const [expiresOn, setExpiresOn] = useState('');
+  const [passcodeProtect, setPasscodeProtect] = useState(false);
+  const [passcode, setPasscode] = useState('');
+  const [secActiveTab, setSecActiveTab] = useState<'privacy' | 'display'>('privacy');
+
+  // Copy Catalogue Modal State
+  const [copyModalCat, setCopyModalCat] = useState<Catalogue | null>(null);
+  const [copyBuyerCompany, setCopyBuyerCompany] = useState('');
+  const [copyBuyerEmail, setCopyBuyerEmail] = useState('');
+  const [copyName, setCopyName] = useState('');
+  const [copyLoading, setCopyLoading] = useState(false);
+
+  // Deactivate Link Modal State
+  const [deactivateModalCat, setDeactivateModalCat] = useState<Catalogue | null>(null);
+  const [deactLoading, setDeactLoading] = useState(false);
+
+  const openSecuritySettings = (cat: Catalogue) => {
+    setSettingsSidebarCat(null);
+    setSecurityModalCat(cat);
+    const ls = cat.linkSettings || {};
+    setRequireEmail(ls.requireEmail || false);
+    setRequireEmailOTP(ls.requireEmailOTP || false);
+    setEmailAccessListMode(ls.emailAccessListMode || 'none');
+    setRequirePhone(ls.requirePhone || false);
+    setRequirePhoneOTP(ls.requirePhoneOTP || false);
+    setExpiresOn(ls.expiresOn ? new Date(ls.expiresOn).toISOString().split('T')[0] : '');
+    setPasscodeProtect(ls.passcodeProtect || false);
+    setPasscode(ls.passcode || '');
+    setSecActiveTab('privacy');
+  };
+
+  const handleUpdateSecurity = async () => {
+    if (!securityModalCat) return;
+    setSecLoading(true);
+    try {
+      const payload = {
+        requireEmail, requireEmailOTP, emailAccessListMode,
+        requirePhone, requirePhoneOTP,
+        expiresOn: expiresOn ? new Date(expiresOn).toISOString() : null,
+        passcodeProtect, passcode
+      };
+      await api.put(`/catalogues/${securityModalCat._id}`, { linkSettings: payload });
+      setSecurityModalCat(null);
+      fetchCatalogues();
+    } catch (e: any) {
+      alert(`Failed to update security settings: ${e?.response?.data?.message || 'Unknown error'}`);
+    } finally {
+      setSecLoading(false);
+    }
+  };
+
+  const handleCopyCatalogue = async () => {
+    if (!copyModalCat || !copyBuyerCompany || !copyName) return alert('Buyer Company and Name are required');
+    setCopyLoading(true);
+    try {
+      await api.post(`/catalogues/${copyModalCat._id}/copy`, {
+        buyerCompany: copyBuyerCompany,
+        buyerEmail: copyBuyerEmail,
+        name: copyName
+      });
+      setCopyModalCat(null);
+      fetchCatalogues();
+    } catch (e: any) {
+      alert(`Failed to copy catalogue: ${e?.response?.data?.message || 'Unknown error'}`);
+    } finally {
+      setCopyLoading(false);
+    }
+  };
+
+  const handleDeactivateLink = async () => {
+    if (!deactivateModalCat) return;
+    setDeactLoading(true);
+    try {
+      // Toggle it to Inactive
+      await api.put(`/catalogues/${deactivateModalCat._id}`, { status: 'Inactive' });
+      setDeactivateModalCat(null);
+      fetchCatalogues();
+    } catch (e: any) {
+      alert(`Failed to deactivate catalogue: ${e?.response?.data?.message || 'Unknown error'}`);
+    } finally {
+      setDeactLoading(false);
+    }
+  };
+
+  const handleDeleteCatalogue = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete ${name}? This cannot be undone.`)) {
+      try {
+        await api.delete(`/catalogues/${id}`);
+        setSettingsSidebarCat(null);
+        fetchCatalogues();
+      } catch (e: any) {
+        alert(`Failed to delete catalogue: ${e?.response?.data?.message || 'Unknown error'}`);
+      }
+    }
+  };
 
   const fetchCatalogues = async () => {
     try {
@@ -258,8 +379,8 @@ export default function CataloguesPage() {
                       
                       {/* Status */}
                       <td className="p-4 py-6 align-top">
-                         <span className="inline-flex items-center justify-center px-3 py-1 rounded bg-[#F4F0FF] text-[#805AD5] font-bold text-[10px] tracking-widest">
-                            ACTIVE
+                         <span className={`inline-flex items-center justify-center px-3 py-1 rounded font-bold text-[10px] tracking-widest ${cat.status === 'Draft' ? 'bg-gray-100 text-gray-600' : cat.status === 'Inactive' ? 'bg-red-50 text-red-600' : 'bg-[#F4F0FF] text-[#805AD5]'}`}>
+                            {cat.status ? cat.status.toUpperCase() : 'ACTIVE'}
                          </span>
                       </td>
 
@@ -339,7 +460,9 @@ export default function CataloguesPage() {
                             </div>
 
                             {/* Settings */}
-                            <button className="p-1.5 border border-gray-200 text-gray-600 bg-white rounded hover:bg-gray-50" title="Settings">
+                            <button 
+                              onClick={() => setSettingsSidebarCat(cat)}
+                              className="p-1.5 border border-gray-200 text-gray-600 bg-white rounded hover:bg-gray-50" title="Settings">
                                <Settings className="w-4 h-4" />
                             </button>
                          </div>
@@ -350,6 +473,324 @@ export default function CataloguesPage() {
             </tbody>
         </table>
       </div>
+
+      {/* Catalogue Settings Sidebar */}
+      {settingsSidebarCat && (
+        <>
+          <div className="fixed inset-0 bg-gray-900/40 z-40" onClick={() => setSettingsSidebarCat(null)}></div>
+          <div className="fixed top-0 right-0 w-[420px] h-full bg-white shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-300">
+             <div className="py-6 px-6 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">Catalogue Settings</h2>
+                <button onClick={() => setSettingsSidebarCat(null)} className="text-gray-400 hover:text-gray-700">
+                  <X className="w-5 h-5" />
+                </button>
+             </div>
+             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+                {/* Options modeled after Image 2 */}
+                <button className="flex items-center justify-between w-full p-4 rounded-xl hover:bg-gray-50 group border border-transparent hover:border-gray-100 transition-colors">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 rounded-full bg-gray-50 text-gray-400 group-hover:bg-green-50 group-hover:text-green-600 flex items-center justify-center mr-4">
+                      <span className="font-bold">₹</span>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-gray-900 leading-tight">Create Quotation</p>
+                      <p className="text-[11px] text-gray-500 font-medium mt-0.5">You can maintain a list of all quotations generated against buyer</p>
+                    </div>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400 -rotate-90 group-hover:text-green-600" />
+                </button>
+
+                <button 
+                  onClick={() => { setSettingsSidebarCat(null); setDeactivateModalCat(settingsSidebarCat); }}
+                  className="flex items-center justify-between w-full p-4 rounded-xl hover:bg-gray-50 group border border-transparent hover:border-gray-100 transition-colors"
+                >
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 rounded-full bg-gray-50 text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 flex items-center justify-center mr-4">
+                      <ExternalLink className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-gray-900 leading-tight">Deactivate catalogue link</p>
+                      <p className="text-[11px] text-gray-500 font-medium mt-0.5">Link will be deactivated and you can activate it again later</p>
+                    </div>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400 -rotate-90 group-hover:text-blue-600" />
+                </button>
+
+                <button 
+                  onClick={() => openSecuritySettings(settingsSidebarCat)}
+                  className="flex items-center justify-between w-full p-4 rounded-xl hover:bg-gray-50 group border border-transparent hover:border-gray-100 transition-colors"
+                >
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 rounded-full bg-gray-50 text-gray-400 group-hover:bg-[#1B6F53]/10 group-hover:text-[#1B6F53] flex items-center justify-center mr-4">
+                      <Settings className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-gray-900 leading-tight">Update link settings</p>
+                      <p className="text-[11px] text-gray-500 font-medium mt-0.5">Change settings for password security and expiry date</p>
+                    </div>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400 -rotate-90 group-hover:text-[#1B6F53]" />
+                </button>
+
+                <button 
+                  onClick={() => {
+                    setSettingsSidebarCat(null);
+                    setCopyBuyerCompany(settingsSidebarCat.buyerCompany);
+                    setCopyName(settingsSidebarCat.name + ' - Copy');
+                    setCopyBuyerEmail(settingsSidebarCat.buyerEmail || '');
+                    setCopyModalCat(settingsSidebarCat);
+                  }}
+                  className="flex items-center justify-between w-full p-4 rounded-xl hover:bg-gray-50 group border border-transparent hover:border-gray-100 transition-colors"
+                >
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 rounded-full bg-gray-50 text-gray-400 group-hover:bg-purple-50 group-hover:text-purple-600 flex items-center justify-center mr-4">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-gray-900 leading-tight">Create a copy of this catalogue</p>
+                      <p className="text-[11px] text-gray-500 font-medium mt-0.5">A copy of this catalogue will be created with same products</p>
+                    </div>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400 -rotate-90 group-hover:text-purple-600" />
+                </button>
+
+                <button className="flex items-center justify-between w-full p-4 rounded-xl hover:bg-gray-50 group border border-transparent hover:border-gray-100 transition-colors">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 rounded-full bg-gray-50 text-gray-400 group-hover:bg-orange-50 group-hover:text-orange-600 flex items-center justify-center mr-4">
+                      <CheckSquare className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-gray-900 leading-tight">Change PPT template</p>
+                      <p className="text-[11px] text-gray-500 font-medium mt-0.5">Set the template of the PPT when buyer downloads from link</p>
+                    </div>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400 -rotate-90 group-hover:text-orange-600" />
+                </button>
+
+                <button 
+                  onClick={() => handleDeleteCatalogue(settingsSidebarCat._id, settingsSidebarCat.name)}
+                  className="flex items-center justify-between w-full p-4 rounded-xl hover:bg-red-50 group border border-transparent hover:border-red-100 transition-colors"
+                >
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 rounded-full bg-red-50 text-red-500 group-hover:bg-red-100 flex items-center justify-center mr-4">
+                      <span className="font-bold text-red-500">×</span>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-red-600 group-hover:text-red-700 leading-tight">Delete this catalogue</p>
+                      <p className="text-[11px] text-red-400 font-medium mt-0.5">Permanently delete this catalogue. You cannot restore them later</p>
+                    </div>
+                  </div>
+                </button>
+             </div>
+             <div className="p-4 flex justify-center border-t border-gray-100">
+               <button onClick={() => setSettingsSidebarCat(null)} className="px-10 py-3 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm w-full">Close</button>
+             </div>
+          </div>
+        </>
+      )}
+
+      {/* Link Security Modal Overlay */}
+      {securityModalCat && (
+        <>
+          <div className="fixed inset-0 bg-gray-900/40 z-40" onClick={() => setSecurityModalCat(null)}></div>
+          <div className="fixed py-4 pr-4 top-0 right-0 w-[420px] h-full z-50 flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="bg-white rounded-2xl shadow-2xl h-full flex flex-col overflow-hidden relative">
+              <div className="pt-6 px-6 pb-2 border-b border-gray-100">
+                 <div className="flex items-center justify-between mb-4">
+                   <h2 className="text-base font-bold text-gray-900 truncate pr-4">Link security for <span className="font-normal text-gray-600">{securityModalCat.name}</span></h2>
+                   <button onClick={() => setSecurityModalCat(null)} className="text-gray-400 hover:text-gray-700 -mr-2">
+                     <X className="w-5 h-5" />
+                   </button>
+                 </div>
+                 <div className="flex gap-6 mt-2">
+                   <button 
+                     onClick={() => setSecActiveTab('privacy')} 
+                     className={`pb-3 text-sm font-semibold ${secActiveTab === 'privacy' ? 'text-[#1B6F53] border-b-2 border-[#1B6F53]' : 'text-gray-500 hover:text-gray-700'}`}>
+                     Privacy Controls
+                   </button>
+                   <button 
+                     onClick={() => setSecActiveTab('display')} 
+                     className={`pb-3 text-sm font-semibold ${secActiveTab === 'display' ? 'text-[#1B6F53] border-b-2 border-[#1B6F53]' : 'text-gray-500 hover:text-gray-700'}`}>
+                     Display Settings
+                   </button>
+                 </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6">
+                {secActiveTab === 'privacy' && (
+                  <div className="space-y-4">
+                    {/* Email Block */}
+                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                       <label className="flex items-center p-4 cursor-pointer hover:bg-gray-50">
+                          <input type="checkbox" checked={requireEmail} onChange={e => setRequireEmail(e.target.checked)} className="w-4 h-4 rounded text-[#1B6F53] focus:ring-[#1B6F53] border-gray-300" />
+                          <span className="ml-3 text-sm font-medium text-gray-900">Email required to view catalogue</span>
+                       </label>
+                       {requireEmail && (
+                         <div className="px-4 pb-4 pl-11 rtl:pr-11 space-y-3">
+                            <label className="flex items-start cursor-pointer hover:bg-gray-50 p-2 rounded -ml-2">
+                              <input type="checkbox" checked={requireEmailOTP} onChange={e => setRequireEmailOTP(e.target.checked)} className="mt-1 w-4 h-4 rounded border-gray-300 text-gray-600" />
+                              <div className="ml-3">
+                                 <span className="block text-sm text-gray-800 font-medium">OTP verification required</span>
+                                 <span className="block text-xs text-gray-500 mt-1">Viewers must verify their email via OTP to access your catalogue</span>
+                              </div>
+                            </label>
+
+                            <label className="flex items-start cursor-pointer hover:bg-gray-50 p-2 rounded -ml-2">
+                              <input type="checkbox" checked={emailAccessListMode !== 'none'} onChange={e => setEmailAccessListMode(e.target.checked ? 'block' : 'none')} className="mt-1 w-4 h-4 rounded border-gray-300 text-gray-600" />
+                              <div className="ml-3">
+                                 <span className="block text-sm text-gray-800 font-medium">Restrict Access</span>
+                                 <span className="block text-xs text-gray-500 mt-1">List which visitors should be blocked/allowed from accessing your catalogue</span>
+                                 {emailAccessListMode !== 'none' && (
+                                    <button className="text-[#1B6F53] font-bold text-xs mt-2 flex items-center hover:underline">Allow or block specific users <ChevronDown className="w-3 h-3 ml-1 -rotate-90" /></button>
+                                 )}
+                              </div>
+                            </label>
+                         </div>
+                       )}
+                    </div>
+
+                    {/* Phone Block */}
+                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                       <label className="flex items-center p-4 cursor-pointer hover:bg-gray-50">
+                          <input type="checkbox" checked={requirePhone} onChange={e => setRequirePhone(e.target.checked)} className="w-4 h-4 rounded text-[#1B6F53] focus:ring-[#1B6F53] border-gray-300" />
+                          <span className="ml-3 text-sm font-medium text-gray-900">Phone number required to view catalogue</span>
+                       </label>
+                       {requirePhone && (
+                         <div className="px-4 pb-4 pl-11 rtl:pr-11 space-y-3">
+                            <label className="flex items-start cursor-pointer hover:bg-gray-50 p-2 rounded -ml-2">
+                              <input type="checkbox" checked={requirePhoneOTP} onChange={e => setRequirePhoneOTP(e.target.checked)} className="mt-1 w-4 h-4 rounded border-gray-300 text-gray-600" />
+                              <div className="ml-3">
+                                 <span className="block text-sm text-gray-800 font-medium">OTP verification required</span>
+                                 <span className="block text-xs text-gray-500 mt-1">catalogue will only be visible when phone number is verified</span>
+                              </div>
+                            </label>
+                         </div>
+                       )}
+                    </div>
+
+                    {/* Expiry Block */}
+                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                       <div className="p-4 cursor-pointer hover:bg-gray-50">
+                          <label className="flex items-center">
+                            <input type="checkbox" checked={!!expiresOn} onChange={e => setExpiresOn(e.target.checked ? new Date().toISOString().split('T')[0] : '')} className="w-4 h-4 rounded text-[#1B6F53] focus:ring-[#1B6F53] border-gray-300 pointer-events-none" />
+                            <div className="ml-3 flex-1 flex flex-col" onClick={e => e.preventDefault()}>
+                               <span className="text-sm font-medium text-gray-900">Link expires on</span>
+                               <span className="text-xs text-gray-500 mt-0.5">Link will be automatically deactivated after the selected date</span>
+                            </div>
+                          </label>
+                       </div>
+                       {expiresOn !== '' && (
+                         <div className="px-4 pb-4 pl-11 rtl:pr-11">
+                            <input 
+                               type="date" 
+                               value={expiresOn} 
+                               onChange={e => setExpiresOn(e.target.value)} 
+                               className="w-full border border-gray-200 rounded px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#1B6F53]"
+                            />
+                         </div>
+                       )}
+                    </div>
+
+                    {/* Passcode Block */}
+                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                       <div className="p-4 cursor-pointer hover:bg-gray-50">
+                          <label className="flex items-center">
+                            <input type="checkbox" checked={passcodeProtect} onChange={e => setPasscodeProtect(e.target.checked)} className="w-4 h-4 rounded text-[#1B6F53] focus:ring-[#1B6F53] border-gray-300 pointer-events-none" />
+                            <div className="ml-3 flex-1 flex flex-col" onClick={e => e.preventDefault()}>
+                               <span className="text-sm font-medium text-gray-900">Passcode protect</span>
+                               <span className="text-xs text-gray-500 mt-0.5">Add a 6-digit passcode to protect your catalogue</span>
+                            </div>
+                          </label>
+                       </div>
+                       {passcodeProtect && (
+                         <div className="px-4 pb-4 pl-11 rtl:pr-11">
+                            <input 
+                               type="text" 
+                               placeholder="Enter 6-digit passcode" 
+                               maxLength={6}
+                               value={passcode} 
+                               onChange={e => setPasscode(e.target.value.replace(/\D/g,''))} 
+                               className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-700 outline-none focus:border-[#1B6F53] tracking-widest font-semibold"
+                            />
+                         </div>
+                       )}
+                    </div>
+                  </div>
+                )}
+
+                {secActiveTab === 'display' && (
+                  <div className="p-8 text-center text-gray-400">Display configuration coming soon...</div>
+                )}
+              </div>
+
+              <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-white z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+                <label className="flex items-center text-sm text-gray-600 cursor-pointer">
+                  <input type="checkbox" className="w-4 h-4 mr-2 border-gray-300 rounded text-gray-900 focus:ring-gray-900" />
+                  Set as default
+                </label>
+                <button 
+                  disabled={secLoading} 
+                  onClick={handleUpdateSecurity}
+                  className="px-6 py-2.5 bg-[#1B2925] text-white rounded-lg text-sm font-semibold hover:bg-black transition-colors"
+                >
+                  {secLoading ? 'Saving...' : 'Update Settings'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+      {/* Copy Catalogue Modal */}
+      {copyModalCat && (
+        <>
+          <div className="fixed inset-0 bg-gray-900/60 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+               <div className="p-6">
+                 <h2 className="text-xl font-bold text-gray-900 mb-2">Creating a copy of {copyModalCat.name}</h2>
+                 <p className="text-sm text-gray-600 mb-6 font-medium leading-relaxed">For creating a new catalogue, you need to rename it or add another buyer's details</p>
+                 
+                 <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-800 mb-1.5"><span className="text-red-500">*</span> Buyer Company <span className="text-gray-400 font-normal">ⓘ</span></label>
+                      <div className="relative">
+                        <input type="text" value={copyBuyerCompany} onChange={e => setCopyBuyerCompany(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 font-medium outline-none focus:border-[#1B6F53]" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-800 mb-1.5">Buyer Email ID (optional)</label>
+                      <input type="email" value={copyBuyerEmail} onChange={e => setCopyBuyerEmail(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 font-medium outline-none focus:border-[#1B6F53]" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-800 mb-1.5"><span className="text-red-500">*</span> Name of the new Catalogue</label>
+                      <input type="text" value={copyName} onChange={e => setCopyName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 font-medium outline-none focus:border-[#1B6F53]" />
+                    </div>
+                 </div>
+               </div>
+               <div className="p-4 px-6 border-t border-gray-100 flex items-center justify-between bg-white">
+                 <button onClick={() => setCopyModalCat(null)} className="px-6 py-2.5 bg-white border border-gray-300 rounded text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancel</button>
+                 <button disabled={copyLoading} onClick={handleCopyCatalogue} className="px-8 py-2.5 bg-[#1B2925] text-white rounded text-sm font-semibold hover:bg-black transition-colors">{copyLoading ? 'Creating...' : 'Create'}</button>
+               </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Deactivate Link Modal */}
+      {deactivateModalCat && (
+        <>
+          <div className="fixed inset-0 bg-gray-900/60 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-8 text-center animate-in fade-in zoom-in-95 duration-200">
+               <h2 className="text-xl font-bold text-gray-900 mb-3">Deactivate catalogue link</h2>
+               <p className="text-sm text-gray-500 mb-8 font-medium">Link will be deactivated and you can activate it again later</p>
+               
+               <div className="flex items-center justify-center gap-4">
+                 <button disabled={deactLoading} onClick={handleDeactivateLink} className="px-6 py-2.5 bg-white border border-gray-300 rounded text-sm font-semibold text-gray-700 hover:bg-gray-50">{deactLoading ? 'Processing...' : 'Yes, Deactivate Link'}</button>
+                 <button onClick={() => setDeactivateModalCat(null)} className="px-6 py-2.5 bg-[#1B2925] text-white rounded text-sm font-semibold hover:bg-black transition-colors">Cancel</button>
+               </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

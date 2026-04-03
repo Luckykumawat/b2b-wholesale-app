@@ -93,27 +93,40 @@ export default function AdminProducts() {
   }, [search, skuFilter, categoryFilter, subCategoryFilter, collectionFilter, sortBy]);
 
   // Extract unique suggestions for filters & datalists
-  const { categories, subCategories, materials, finishes, collections } = useMemo(() => {
-    const cats = new Set<string>();
-    const subCats = new Set<string>();
-    const mats = new Set<string>();
-    const fins = new Set<string>();
-    const cols = new Set<string>();
-    products.forEach(p => {
-      if (p.category) cats.add(p.category);
-      if (p.subCategory) subCats.add(p.subCategory);
-      if (p.material) mats.add(p.material);
-      if (p.finish) fins.add(p.finish);
-      if (p.collectionName) cols.add(p.collectionName);
+  // Extract unique suggestions for filters & datalists
+  const [filterOptions, setFilterOptions] = useState({
+    categories: new Set<string>(),
+    subCategories: new Set<string>(),
+    materials: new Set<string>(),
+    finishes: new Set<string>(),
+    collections: new Set<string>()
+  });
+
+  useEffect(() => {
+    setFilterOptions(prev => {
+      const next = {
+        categories: new Set(prev.categories),
+        subCategories: new Set(prev.subCategories),
+        materials: new Set(prev.materials),
+        finishes: new Set(prev.finishes),
+        collections: new Set(prev.collections)
+      };
+      products.forEach(p => {
+        if (p.category) next.categories.add(p.category);
+        if (p.subCategory) next.subCategories.add(p.subCategory);
+        if (p.material) next.materials.add(p.material);
+        if (p.finish) next.finishes.add(p.finish);
+        if (p.collectionName) next.collections.add(p.collectionName);
+      });
+      return next;
     });
-    return {
-      categories: Array.from(cats),
-      subCategories: Array.from(subCats),
-      materials: Array.from(mats),
-      finishes: Array.from(fins),
-      collections: Array.from(cols)
-    };
   }, [products]);
+
+  const categories = Array.from(filterOptions.categories);
+  const subCategories = Array.from(filterOptions.subCategories);
+  const materials = Array.from(filterOptions.materials);
+  const finishes = Array.from(filterOptions.finishes);
+  const collections = Array.from(filterOptions.collections);
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
