@@ -44,9 +44,9 @@ const PLANS = [
 export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [plan, setPlan] = useState('free');
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const register = useAuthStore((state) => state.register);
   const router = useRouter();
@@ -55,7 +55,9 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
     try {
-      await register(name, email, password, plan);
+      // Use email prefix as a default name since we're removing the name field
+      const defaultName = email.split('@')[0];
+      await register(defaultName, email, password, phone, plan);
       router.push('/admin/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -152,17 +154,7 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleRegister} className="space-y-5">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Full Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1B6F53] focus:border-transparent outline-none transition-all text-sm font-medium"
-                placeholder="John Doe"
-              />
-            </div>
+
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Email</label>
               <input
@@ -183,6 +175,16 @@ export default function RegisterPage() {
                 required
                 className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1B6F53] focus:border-transparent outline-none transition-all text-sm font-medium"
                 placeholder="••••••••"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Phone Number</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1B6F53] focus:border-transparent outline-none transition-all text-sm font-medium"
+                placeholder="+1 (555) 000-0000"
               />
             </div>
             <button

@@ -14,7 +14,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  register: (name: string, email: string, password: string, plan: string) => Promise<void>;
+  register: (name: string, email: string, password: string, phone: string, plan: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
@@ -25,8 +25,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: typeof window !== 'undefined' ? localStorage.getItem('token') : null,
   isLoading: true,
 
-  register: async (name, email, password, plan) => {
-    const { data } = await api.post('/auth/register', { name, email, password, plan });
+  register: async (name, email, password, phone, plan) => {
+    const { data } = await api.post('/auth/register', { name, email, password, phone, plan });
     localStorage.setItem('token', data.token);
     set({ user: data, token: data.token });
   },

@@ -52,6 +52,12 @@ export default function SharedCatalog() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Quotation State
+  const [shortlist, setShortlist] = useState<Record<string, number>>({}); 
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [submittingQuote, setSubmittingQuote] = useState(false);
+  const [quoteSuccess, setQuoteSuccess] = useState(false);
+
   useEffect(() => {
     const fetchCatalog = async () => {
       if (!token) return;
@@ -145,6 +151,61 @@ export default function SharedCatalog() {
     }
   };
 
+  const toggleShortlist = (productId: string) => {
+    setShortlist(prev => {
+      const next = { ...prev };
+      if (next[productId]) {
+        delete next[productId];
+      } else {
+        next[productId] = 1;
+      }
+      return next;
+    });
+  };
+
+  const updateQuantity = (productId: string, qty: number) => {
+    setShortlist(prev => ({
+      ...prev,
+      [productId]: Math.max(1, qty)
+    }));
+  };
+
+  const submitQuotation = async () => {
+    if (!data || Object.keys(shortlist).length === 0) return;
+    setSubmittingQuote(true);
+    setAuthError('');
+    try {
+      const products = Object.entries(shortlist).map(([id, qty]) => {
+        const p = data.products.find(prod => prod._id === id);
+        return {
+          product: id,
+          quantity: qty,
+          quotedPrice: p?.customPrice || p?.basePrice || 0
+        };
+      });
+
+      await api.post('/quotations/public', {
+        products,
+        token,
+        email: emailInput,
+        name: data.buyerCompany,
+        phone: phoneInput
+      });
+
+      setQuoteSuccess(true);
+      setShortlist({});
+      setTimeout(() => {
+        setIsQuoteModalOpen(false);
+        setQuoteSuccess(false);
+      }, 3000);
+    } catch (err) {
+      console.error('Error submitting quotation', err);
+      setAuthError('Failed to submit quotation. Please try again.');
+    } finally {
+      setSubmittingQuote(false);
+    }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-white font-medium text-gray-500 italic">Initializing catalog session...</div>;
   if (!data && !authRequirements) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-red-500 font-bold">Catalogue not found or link has expired.</div>;
 
@@ -170,37 +231,37 @@ export default function SharedCatalog() {
                
                <form onSubmit={handleAuthSubmit} className="space-y-4">
                  {authRequirements.requirePasscode && (
-                   <div>
-                     <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-2">
-                       <span>Enter 6-digit Passcode</span>
-                       <span className="text-red-500">*</span>
-                     </label>
-                     <input type="text" maxLength={6} required value={passcodeInput} onChange={e => setPasscodeInput(e.target.value)} className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-center text-lg tracking-[0.5em] font-black outline-none focus:border-[#1B6F53] transition-colors" placeholder="••••••" />
-                   </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-2">
+                        <span>Enter 6-digit Passcode</span>
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input type="text" maxLength={6} required value={passcodeInput} onChange={e => setPasscodeInput(e.target.value)} className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-center text-lg tracking-[0.5em] font-black outline-none focus:border-[#1B6F53] transition-colors" placeholder="••••••" />
+                    </div>
                  )}
                  {authRequirements.requireEmail && (
-                   <div>
-                     <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-2">
-                       <span>Email Address</span>
-                       <span className="text-red-500">*</span>
-                     </label>
-                     <input type="email" required value={emailInput} onChange={e => setEmailInput(e.target.value)} className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:border-[#1B6F53] transition-colors" placeholder="buyer@example.com" />
-                   </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-2">
+                        <span>Email Address</span>
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input type="email" required value={emailInput} onChange={e => setEmailInput(e.target.value)} className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:border-[#1B6F53] transition-colors" placeholder="buyer@example.com" />
+                    </div>
                  )}
                  {authRequirements.requirePhone && (
-                   <div>
-                     <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-2">
-                       <span>Phone Number</span>
-                       <span className="text-red-500">*</span>
-                     </label>
-                     <input type="tel" required value={phoneInput} onChange={e => setPhoneInput(e.target.value)} className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:border-[#1B6F53] transition-colors" placeholder="+1 (555) 000-0000" />
-                   </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-2">
+                        <span>Phone Number</span>
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input type="tel" required value={phoneInput} onChange={e => setPhoneInput(e.target.value)} className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:border-[#1B6F53] transition-colors" placeholder="+1 (555) 000-0000" />
+                    </div>
                  )}
                  {(authRequirements.requireEmailOTP || authRequirements.requirePhoneOTP) && (authRequirements.message?.includes('Sent') || authRequirements.message?.includes('OTP')) && (
-                   <div>
-                     <label className="block text-sm font-bold text-gray-700 mb-1.5">Enter Verification Code</label>
-                     <input type="text" required value={otpInput} onChange={e => setOtpInput(e.target.value)} className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-center text-lg tracking-[0.3em] font-black outline-none focus:border-[#1B6F53] transition-colors" placeholder="000000" />
-                   </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1.5">Enter Verification Code</label>
+                      <input type="text" required value={otpInput} onChange={e => setOtpInput(e.target.value)} className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-center text-lg tracking-[0.3em] font-black outline-none focus:border-[#1B6F53] transition-colors" placeholder="000000" />
+                    </div>
                  )}
                  
                  <button type="submit" disabled={authLoading} className="w-full mt-4 bg-[#1B6F53] hover:bg-[#14553F] text-white rounded-xl py-3.5 text-sm font-bold shadow-lg shadow-[#1B6F53]/20 transition-all disabled:opacity-50">
@@ -215,7 +276,6 @@ export default function SharedCatalog() {
 
   if (!data) return null;
 
-  // Function to render attribute based on customColumns
   const renderAttribute = (product: Product, col: string) => {
     const val = (c: string) => {
       switch(c) {
@@ -245,7 +305,6 @@ export default function SharedCatalog() {
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
       
-      {/* Header matching Image 1 */}
       <header className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white shadow-sm rounded-lg flex items-center justify-center p-1 border border-gray-50">
@@ -254,28 +313,33 @@ export default function SharedCatalog() {
           <h1 className="text-xl font-extrabold text-[#1B6F53] tracking-tight">Laxmi Ideal Interiors</h1>
         </div>
         <div className="flex items-center gap-6">
-          <button className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors">
-            <CheckSquare className="w-5 h-5 text-gray-400" />
+          <button 
+            onClick={() => setIsQuoteModalOpen(true)}
+            className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-[#1B6F53] transition-colors relative"
+          >
+            <CheckSquare className={`w-5 h-5 ${Object.keys(shortlist).length > 0 ? 'text-[#1B6F53]' : 'text-gray-400'}`} />
             <span>My Shortlist</span>
+            {Object.keys(shortlist).length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-[#1B6F53] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                {Object.keys(shortlist).length}
+              </span>
+            )}
           </button>
         </div>
       </header>
 
-      {/* Caution Banner */}
       <div className="bg-[#FAEAEA] px-6 py-2 flex items-center justify-center gap-2 text-red-700 text-sm font-bold border-b border-red-100">
          <span className="text-lg">⚠️</span>
          <span>This is a preview of the catalogue. Do not share this link with the buyer.</span>
       </div>
 
       {activeIndex === null ? (
-        /* Overview Mode (Image 1) */
         <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-10">
           <div className="mb-8">
             <h2 className="text-2xl font-extrabold text-gray-900 mb-1">{data.name}</h2>
             <p className="text-sm font-bold text-gray-500">{data.products.length} Products</p>
           </div>
 
-          {/* Banner Section (Simplified matching image) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12 h-[300px]">
              <div className="md:col-span-3 bg-gray-50 rounded-2xl overflow-hidden flex gap-2 p-2 border border-gray-100">
                 <div className="flex-1 bg-white rounded-xl overflow-hidden shadow-sm">
@@ -294,7 +358,6 @@ export default function SharedCatalog() {
                    <div className="w-full h-[1px] bg-gray-300 my-4"></div>
                    <p className="text-xs font-bold text-gray-500">www.laxmiexport.com</p>
                 </div>
-                {/* Decorative leaf like matching image */}
                 <div className="absolute -bottom-10 -right-10 opacity-10">
                   <Package className="w-40 h-40 text-[#1B6F53]" />
                 </div>
@@ -311,8 +374,17 @@ export default function SharedCatalog() {
                     <ImageIcon className="w-10 h-10 text-gray-300" />
                   )}
                 </div>
-                <div className="p-4 border-t border-gray-100 flex-1 bg-white">
+                <div className="p-4 border-t border-gray-100 flex-1 bg-white flex justify-between items-center">
                   <p className="text-xs font-extrabold text-gray-900 tracking-tight">ID - {product.sku || product._id.slice(-6).toUpperCase()}</p>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleShortlist(product._id);
+                    }}
+                    className={`p-1.5 rounded-lg transition-colors ${shortlist[product._id] ? 'text-red-500 bg-red-50' : 'text-gray-300 hover:text-red-500 hover:bg-red-50'}`}
+                  >
+                    <Heart className={`w-4 h-4 ${shortlist[product._id] ? 'fill-current' : ''}`} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -330,9 +402,7 @@ export default function SharedCatalog() {
           </div>
         </main>
       ) : activeProduct && (
-        /* Detail Mode (Image 2) */
         <main className="flex-1 flex flex-col">
-          {/* Breadcrumbs & Back */}
           <div className="px-12 py-6 flex items-center justify-between">
             <div className="flex items-center gap-6">
               <button 
@@ -348,14 +418,13 @@ export default function SharedCatalog() {
                 <span className="text-gray-900">Product</span>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
-               <CheckSquare className="w-5 h-5 text-gray-400" />
-               <span>My Shortlist</span>
+            <div className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer" onClick={() => setIsQuoteModalOpen(true)}>
+               <CheckSquare className={`w-5 h-5 ${Object.keys(shortlist).length > 0 ? 'text-[#1B6F53]' : 'text-gray-400'}`} />
+               <span>My Shortlist ({Object.keys(shortlist).length})</span>
             </div>
           </div>
 
           <div className="px-12 flex-1 flex flex-col lg:flex-row gap-16 pb-12">
-            {/* Left: Images */}
             <div className="flex-1 flex flex-col min-w-0">
                <div className="aspect-[4/3] bg-[#F8F9F9] rounded-3xl relative flex items-center justify-center p-8 group overflow-hidden">
                   <button 
@@ -380,7 +449,6 @@ export default function SharedCatalog() {
                   )}
                </div>
 
-               {/* Thumbnails */}
                <div className="mt-6 flex flex-wrap gap-3">
                   {activeProduct.images?.map((img, idx) => (
                     <button 
@@ -394,7 +462,6 @@ export default function SharedCatalog() {
                </div>
             </div>
 
-            {/* Right: Info */}
             <div className="w-full lg:w-[400px] flex flex-col">
                <div className="flex items-center justify-between mb-2">
                  <h2 className="text-2xl font-extrabold text-gray-900">ID: {activeProduct.sku || activeProduct._id.slice(-6).toUpperCase()}</h2>
@@ -404,11 +471,20 @@ export default function SharedCatalog() {
                </p>
 
                <div className="flex gap-4 mb-10">
-                  <button className="flex-1 py-3 border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2 transition-all">
-                    <Heart className="w-4 h-4 text-gray-400" />
-                    <span>Shortlist</span>
+                  <button 
+                    onClick={() => toggleShortlist(activeProduct._id)}
+                    className={`flex-1 py-3 border rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${shortlist[activeProduct._id] ? 'bg-red-50 border-red-200 text-red-500' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    <Heart className={`w-4 h-4 ${shortlist[activeProduct._id] ? 'fill-current' : 'text-gray-400'}`} />
+                    <span>{shortlist[activeProduct._id] ? 'Shortlisted' : 'Shortlist'}</span>
                   </button>
-                  <button className="flex-1 py-3 bg-black text-white rounded-lg text-sm font-bold hover:bg-gray-800 flex items-center justify-center gap-2 shadow-lg transition-all">
+                  <button 
+                    onClick={() => {
+                      if (!shortlist[activeProduct._id]) toggleShortlist(activeProduct._id);
+                      setIsQuoteModalOpen(true);
+                    }}
+                    className="flex-1 py-3 bg-black text-white rounded-lg text-sm font-bold hover:bg-gray-800 flex items-center justify-center gap-2 shadow-lg transition-all"
+                  >
                     <MessageSquare className="w-4 h-4" />
                     <span>Get quote</span>
                   </button>
@@ -422,7 +498,6 @@ export default function SharedCatalog() {
             </div>
           </div>
 
-          {/* Bottom Carousel matching Image 2 */}
           <div className="mt-auto bg-white border-t border-gray-100 p-8">
              <h3 className="text-sm font-extrabold text-gray-900 mb-6 uppercase tracking-widest">View more products</h3>
              <div className="relative group/carousel">
@@ -463,6 +538,101 @@ export default function SharedCatalog() {
              </div>
           </div>
         </main>
+      )}
+
+      {/* Quotation Submission Modal */}
+      {isQuoteModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-12 animate-in fade-in duration-300">
+           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setIsQuoteModalOpen(false)}></div>
+           <div className="relative bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="px-10 py-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                 <div>
+                    <h2 className="text-2xl font-black text-gray-900 tracking-tight">Request Quotation</h2>
+                    <p className="text-sm font-bold text-gray-500 mt-1">Review your shortlist and submit your request.</p>
+                 </div>
+                 <button onClick={() => setIsQuoteModalOpen(false)} className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors">
+                    <X className="w-6 h-6" />
+                 </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
+                 {quoteSuccess ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-500 py-20">
+                       <div className="w-24 h-24 bg-green-50 text-green-600 rounded-[35px] flex items-center justify-center mb-6">
+                          <CheckSquare className="w-12 h-12" />
+                       </div>
+                       <h3 className="text-3xl font-black text-gray-900 mb-2">Request Submitted!</h3>
+                       <p className="text-gray-500 font-bold max-w-sm mx-auto">We've received your request and will get back to you shortly with the best prices.</p>
+                    </div>
+                 ) : Object.keys(shortlist).length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center py-20">
+                       <Package className="w-16 h-16 text-gray-200 mb-4" />
+                       <h3 className="text-lg font-black text-gray-900 mb-1">Your shortlist is empty</h3>
+                       <p className="text-gray-500 text-sm font-bold">Add products from the catalog to request a quote.</p>
+                       <button onClick={() => setIsQuoteModalOpen(false)} className="mt-6 px-8 py-3 bg-gray-900 text-white rounded-2xl text-sm font-bold">Browse Products</button>
+                    </div>
+                 ) : (
+                    <div className="space-y-6">
+                       <div className="grid grid-cols-1 gap-4">
+                          {Object.entries(shortlist).map(([id, qty]) => {
+                             const product = data.products.find(p => p._id === id);
+                             if (!product) return null;
+                             return (
+                               <div key={id} className="flex items-center gap-6 bg-gray-50/50 p-6 rounded-[30px] border border-gray-100 group">
+                                  <div className="w-24 h-24 bg-white rounded-[20px] shadow-sm border border-gray-50 flex items-center justify-center p-3">
+                                     <img src={product.images?.[0]} className="w-full h-full object-contain mix-blend-multiply" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                     <h4 className="text-lg font-black text-gray-900 truncate">{product.name}</h4>
+                                     <p className="text-xs font-bold text-gray-400 mt-0.5 uppercase tracking-wider">SKU: {product.sku || id.slice(-6).toUpperCase()}</p>
+                                  </div>
+                                  <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-gray-50">
+                                     <button onClick={() => updateQuantity(id, qty - 1)} className="w-10 h-10 rounded-xl hover:bg-gray-50 flex items-center justify-center text-gray-500 transition-colors">
+                                        <ChevronLeft className="w-5 h-5" />
+                                     </button>
+                                     <input 
+                                        type="number" 
+                                        value={qty} 
+                                        onChange={(e) => updateQuantity(id, parseInt(e.target.value) || 1)}
+                                        className="w-12 text-center font-black text-gray-900 outline-none"
+                                     />
+                                     <button onClick={() => updateQuantity(id, qty + 1)} className="w-10 h-10 rounded-xl hover:bg-gray-50 flex items-center justify-center text-gray-500 transition-colors">
+                                        <ChevronRight className="w-5 h-5" />
+                                     </button>
+                                  </div>
+                                  <button onClick={() => toggleShortlist(id)} className="w-10 h-10 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors">
+                                     <X className="w-6 h-6" />
+                                  </button>
+                               </div>
+                             );
+                          })}
+                       </div>
+                    </div>
+                 )}
+              </div>
+
+              {!quoteSuccess && Object.keys(shortlist).length > 0 && (
+                <div className="p-10 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between gap-6">
+                   <div className="text-center sm:text-left">
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Items Selected</p>
+                      <p className="text-2xl font-black text-gray-900">{Object.keys(shortlist).length} Products</p>
+                   </div>
+                   <button 
+                      onClick={submitQuotation}
+                      disabled={submittingQuote}
+                      className="w-full sm:w-auto px-12 py-5 bg-[#1B6F53] hover:bg-[#14553F] text-white rounded-[25px] font-black tracking-tight shadow-xl shadow-green-900/20 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                   >
+                      {submittingQuote ? 'Submitting Request...' : (
+                        <>
+                          <span>Submit Quote Request</span>
+                          <ChevronRight className="w-5 h-5" />
+                        </>
+                      )}
+                   </button>
+                </div>
+              )}
+           </div>
+        </div>
       )}
 
       {/* Persistent global CSS for nicer UI hints */}

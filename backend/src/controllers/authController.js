@@ -1,15 +1,15 @@
-const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const userService = require('../services/userService');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
 const registerUser = async (req, res) => {
-  const { name, email, password, plan } = req.body;
+  const { name, email, password, phone, plan } = req.body;
   try {
-    const userExists = await User.findOne({ email });
+    const userExists = await userService.getByEmail(email);
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -18,10 +18,11 @@ const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // For testing purposes, we default to 'admin' so the user can test the admin flow immediately
-    const user = await User.create({
+    const user = await userService.createUser({
       name,
       email,
       password: hashedPassword,
+      phone,
       role: 'admin',
       plan: plan || 'free'
     });
@@ -46,15 +47,8 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
-  console.log('Login attempt:', email);
   try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      console.log('User not found:', email);
-    } else {
-      const isMatch = await bcrypt.compare(password, user.password);
-      console.log('User found. Password match:', isMatch);
-    }
+    const user = await userService.getByEmail(email);
     
     if (user && (await bcrypt.compare(password, user.password))) {
       if (user.status === 'suspended') {
@@ -74,14 +68,13 @@ const loginUser = async (req, res) => {
       res.status(401).json({ message: 'Invalid email or password' });
     }
   } catch (error) {
-    console.error('Login error:', error);
     res.status(500).json({ message: error.message });
   }
 };
 
 const getMe = async (req, res) => {
-  const user = await require('../models/User').findById(req.user._id).select('-password');
-  res.json(user);
+  const user = await userService.getById(req.user._id);
+  res.json(userService.sanitizeUser(user));
 };
 
 module.exports = { registerUser, loginUser, getMe };

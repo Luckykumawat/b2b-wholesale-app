@@ -1,13 +1,13 @@
-const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const { logActivity } = require('./activityController');
+const userService = require('../services/userService');
 
 // @desc    Get all buyers
 // @route   GET /api/users
 // @access  Private/Admin
 const getBuyers = async (req, res) => {
   try {
-    const buyers = await User.find({ role: 'buyer', assignedAdmin: req.user._id }).select('-password');
+    const buyers = await userService.listBuyersByAdmin(req.user._id);
     res.json(buyers);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -21,7 +21,7 @@ const createBuyer = async (req, res) => {
   try {
     const { name, email, password, companyDetails, customPricingTier } = req.body;
     
-    const userExists = await User.findOne({ email });
+    const userExists = await userService.getByEmail(email);
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -29,7 +29,7 @@ const createBuyer = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const buyer = await User.create({
+    const buyer = await userService.createUser({
       name,
       email,
       password: hashedPassword,
@@ -60,19 +60,20 @@ const createBuyer = async (req, res) => {
 // @access  Private/Admin
 const updateBuyer = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await userService.getById(req.params.id);
     if (user && user.role === 'buyer') {
-      user.name = req.body.name || user.name;
-      user.email = req.body.email || user.email;
-      user.companyDetails = req.body.companyDetails || user.companyDetails;
-      user.customPricingTier = req.body.customPricingTier || user.customPricingTier;
-
+      const updates = {
+        name: req.body.name || user.name,
+        email: req.body.email || user.email,
+        companyDetails: req.body.companyDetails || user.companyDetails,
+        customPricingTier: req.body.customPricingTier || user.customPricingTier,
+      };
       if (req.body.password) {
         const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(req.body.password, salt);
+        updates.password = await bcrypt.hash(req.body.password, salt);
       }
 
-      const updatedUser = await user.save();
+      const updatedUser = await userService.updateUser(req.params.id, updates);
       res.json({
         _id: updatedUser._id,
         name: updatedUser.name,
@@ -93,36 +94,15 @@ const updateBuyer = async (req, res) => {
 const getAllUsers = async (req, res) => {
   try {
     const { name, email, phone, companyName, state, district, country } = req.query;
-    let query = { role: 'admin' };
-
-    if (name) query.name = { $regex: name, $options: 'i' };
-    if (email) query.email = { $regex: email, $options: 'i' };
-    if (phone) query.phone = { $regex: phone, $options: 'i' };
-    if (companyName) query.companyName = { $regex: companyName, $options: 'i' };
-    if (state) query.state = { $regex: state, $options: 'i' };
-    if (district) query.district = { $regex: district, $options: 'i' };
-    if (country) query.country = { $regex: country, $options: 'i' };
-
-    const pipeline = [
-      { $match: query },
-      {
-        $lookup: {
-          from: 'products',
-          localField: '_id',
-          foreignField: 'createdBy',
-          as: 'products'
-        }
-      },
-      {
-        $addFields: {
-          productCount: { $size: '$products' }
-        }
-      },
-      { $project: { password: 0, products: 0 } },
-      { $sort: { createdAt: -1 } }
-    ];
-
-    const users = await User.aggregate(pipeline);
+    const users = await userService.listAdmins({
+      name,
+      email,
+      phone,
+      companyName,
+      state,
+      district,
+      country,
+    });
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -138,7 +118,7 @@ const createAdminUser = async (req, res) => {
       name, email, password, phone, companyName, state, district, country, plan
     } = req.body;
     
-    const userExists = await User.findOne({ email });
+    const userExists = await userService.getByEmail(email);
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -146,7 +126,7 @@ const createAdminUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const user = await User.create({
+    const user = await userService.createUser({
       name,
       email,
       password: hashedPassword,
@@ -180,24 +160,26 @@ const createAdminUser = async (req, res) => {
 // @access  Private/SuperAdmin
 const updateAdminUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await userService.getById(req.params.id);
     if (user && user.role === 'admin') {
-      user.name = req.body.name || user.name;
-      user.email = req.body.email || user.email;
-      user.phone = req.body.phone !== undefined ? req.body.phone : user.phone;
-      user.companyName = req.body.companyName !== undefined ? req.body.companyName : user.companyName;
-      user.state = req.body.state !== undefined ? req.body.state : user.state;
-      user.district = req.body.district !== undefined ? req.body.district : user.district;
-      user.country = req.body.country !== undefined ? req.body.country : user.country;
-      if (req.body.plan) user.plan = req.body.plan;
-      if (req.body.status) user.status = req.body.status;
+      const updates = {
+        name: req.body.name || user.name,
+        email: req.body.email || user.email,
+        phone: req.body.phone !== undefined ? req.body.phone : user.phone,
+        companyName: req.body.companyName !== undefined ? req.body.companyName : user.companyName,
+        state: req.body.state !== undefined ? req.body.state : user.state,
+        district: req.body.district !== undefined ? req.body.district : user.district,
+        country: req.body.country !== undefined ? req.body.country : user.country,
+      };
+      if (req.body.plan) updates.plan = req.body.plan;
+      if (req.body.status) updates.status = req.body.status;
 
       if (req.body.password) {
         const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(req.body.password, salt);
+        updates.password = await bcrypt.hash(req.body.password, salt);
       }
 
-      const updatedUser = await user.save();
+      const updatedUser = await userService.updateUser(req.params.id, updates);
       res.json({
         _id: updatedUser._id,
         name: updatedUser.name,

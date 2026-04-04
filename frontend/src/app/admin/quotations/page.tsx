@@ -22,9 +22,11 @@ interface Quotation {
     _id: string;
     name: string;
     email: string;
+    companyName?: string;
   };
   products: QuotationProduct[];
   totalAmount: number;
+  status: string;
   createdAt: string;
 }
 
@@ -32,6 +34,8 @@ export default function AdminQuotations() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);
+  const [editedItems, setEditedItems] = useState<Record<string, QuotationProduct[]>>({});
 
   useEffect(() => {
     fetchQuotations();
@@ -46,6 +50,66 @@ export default function AdminQuotations() {
       console.error('Failed to fetch quotations', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, status: string) => {
+    setUpdating(id);
+    try {
+      await api.patch(`/quotations/${id}/status`, { status });
+      await fetchQuotations();
+    } catch (error) {
+      console.error('Failed to update status', error);
+      alert('Failed to update status');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handlePriceUpdate = (quoteId: string, itemIdx: number, newPrice: number) => {
+    setEditedItems(prev => {
+      const quote = quotations.find(q => q._id === quoteId);
+      if (!quote) return prev;
+      
+      const newProducts = editedItems[quoteId] ? [...editedItems[quoteId]] : JSON.parse(JSON.stringify(quote.products));
+      newProducts[itemIdx].quotedPrice = newPrice;
+      
+      return {
+        ...prev,
+        [quoteId]: newProducts
+      };
+    });
+  };
+
+  const savePriceChanges = async (quoteId: string) => {
+    const products = editedItems[quoteId];
+    if (!products) return;
+
+    setUpdating(quoteId);
+    try {
+      const totalAmount = products.reduce((acc, curr) => acc + (curr.quantity * curr.quotedPrice), 0);
+      await api.put(`/quotations/${quoteId}`, { 
+        products: products.map(p => ({ 
+          product: p.product._id, 
+          quantity: p.quantity, 
+          quotedPrice: p.quotedPrice 
+        })),
+        totalAmount
+      });
+      
+      // Clear edited state and refresh
+      setEditedItems(prev => {
+        const next = { ...prev };
+        delete next[quoteId];
+        return next;
+      });
+      await fetchQuotations();
+      alert('Quote updated successfully');
+    } catch (error) {
+      console.error('Failed to update quote', error);
+      alert('Failed to update quote');
+    } finally {
+      setUpdating(null);
     }
   };
 
@@ -93,6 +157,7 @@ export default function AdminQuotations() {
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider">Date</th>
                   <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider">Buyer</th>
+                  <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider text-center">Status</th>
                   <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider text-center">Items Requested</th>
                   <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider text-right">Actions</th>
                 </tr>
@@ -123,12 +188,40 @@ export default function AdminQuotations() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                            quote.status === 'confirmed_by_buyer' ? 'bg-green-100 text-green-700' :
+                            quote.status === 'approved' || quote.status === 'approved_by_admin' ? 'bg-blue-100 text-blue-700' :
+                            quote.status.includes('rejected') ? 'bg-red-100 text-red-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>
+                            {quote.status.replace(/_/g, ' ')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-black bg-gray-100 text-gray-700">
-                            {quote.products.length} Products ({totalItems} Qty)
+                            {quote.products.length} Products
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                           <div className="flex items-center justify-end space-x-3">
+                            {quote.status === 'pending' && (
+                              <>
+                                <button
+                                  onClick={() => handleUpdateStatus(quote._id, 'approved_by_admin')}
+                                  disabled={updating === quote._id}
+                                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleUpdateStatus(quote._id, 'rejected')}
+                                  disabled={updating === quote._id}
+                                  className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
                             <button
                               onClick={() => handleDownloadPDF(quote._id, quote.buyer.name)}
                               className="flex items-center px-3 py-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-xs font-bold transition-all"
@@ -150,14 +243,25 @@ export default function AdminQuotations() {
                       {/* Expanded Details Row */}
                       {isExpanded && (
                         <tr className="bg-gray-50/50 border-b border-gray-100">
-                          <td colSpan={4} className="p-0">
+                          <td colSpan={5} className="p-0">
                             <div className="py-6 px-8 bg-blue-50/30 border-t border-blue-100/50 shadow-inner">
-                              <h4 className="text-sm font-black text-gray-900 mb-4 flex items-center">
-                                <Package className="w-4 h-4 mr-2 text-blue-600" />
-                                Requested Products
-                              </h4>
+                              <div className="flex justify-between items-center mb-4">
+                                <h4 className="text-sm font-black text-gray-900 flex items-center">
+                                  <Package className="w-4 h-4 mr-2 text-blue-600" />
+                                  Requested Products & Pricing
+                                </h4>
+                                {editedItems[quote._id] && (
+                                  <button
+                                    onClick={() => savePriceChanges(quote._id)}
+                                    disabled={updating === quote._id}
+                                    className="bg-blue-600 text-white px-4 py-1.5 rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all disabled:opacity-50"
+                                  >
+                                    {updating === quote._id ? 'Saving...' : 'Save Prices'}
+                                  </button>
+                                )}
+                              </div>
                               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                {quote.products.map((item, idx) => (
+                                {(editedItems[quote._id] || quote.products).map((item: any, idx: number) => (
                                   <div key={idx} className="flex bg-white p-4 rounded-2xl border border-gray-100 shadow-sm items-center">
                                     <div className="w-16 h-16 bg-gray-50 rounded-xl mr-4 flex-shrink-0 flex items-center justify-center border border-gray-100 overflow-hidden p-2">
                                       {item.product?.images?.[0] ? (
@@ -170,9 +274,22 @@ export default function AdminQuotations() {
                                       <p className="font-bold text-gray-900 text-sm truncate">{item.product?.name || 'Unknown Product'}</p>
                                       <p className="text-xs font-semibold text-gray-400 mt-0.5">SKU: {item.product?.sku || item.product?._id?.slice(-6).toUpperCase() || 'N/A'}</p>
                                     </div>
-                                    <div className="text-right">
-                                      <div className="text-xs text-gray-500 mb-1">Quantity</div>
-                                      <div className="font-black text-gray-900 bg-gray-100 px-3 py-1 rounded-lg inline-block">{item.quantity}</div>
+                                    <div className="flex flex-col items-end gap-2">
+                                      <div className="text-right">
+                                        <div className="text-[10px] font-black text-gray-400 uppercase mb-1">Price per unit</div>
+                                        <div className="relative">
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">$</span>
+                                          <input 
+                                            type="number"
+                                            value={item.quotedPrice}
+                                            onChange={(e) => handlePriceUpdate(quote._id, idx, parseFloat(e.target.value) || 0)}
+                                            className="w-24 pl-6 pr-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-xs font-black text-gray-900 focus:border-blue-500 outline-none transition-all"
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="text-[10px] font-black text-gray-400 uppercase">Quantity: <span className="text-gray-900">{item.quantity}</span></div>
+                                      </div>
                                     </div>
                                   </div>
                                 ))}
