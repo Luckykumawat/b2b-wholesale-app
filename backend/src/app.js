@@ -22,6 +22,7 @@ const dashboardRoutes = require('./routes/dashboard');
 const catalogRoutes = require('./routes/catalogs');
 const cataloguesRoutes = require('./routes/catalogues');
 const activityRoutes = require('./routes/activity');
+const notificationRoutes = require('./routes/notifications');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -32,6 +33,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/catalogs/shared', catalogRoutes);
 app.use('/api/catalogues', cataloguesRoutes);
 app.use('/api/activity', activityRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Configure static path for local image uploads
 app.use('/uploads', express.static('uploads'));

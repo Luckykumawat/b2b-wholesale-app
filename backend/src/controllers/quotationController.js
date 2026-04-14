@@ -1,6 +1,8 @@
 const quotationService = require('../services/quotationService');
 const userService = require('../services/userService');
 const PDFDocument = require('pdfkit');
+const { logActivity } = require('./activityController');
+const { createNotification } = require('./notificationController');
 
 const quotationBuyerId = (quotation) =>
   quotation?.buyer?._id ?? quotation?.buyer?.id ?? quotation?.buyer;
@@ -39,10 +41,18 @@ const createQuotation = async (req, res) => {
       buyer: buyerId,
       products,
       totalAmount,
-      createdBy: req.user._id
+      createdBy: req.user.role === 'buyer' ? req.user.assignedAdmin : req.user._id
     };
 
     const createdQuotation = await quotationService.createQuotation(payload);
+
+    if (req.user.role === 'buyer') {
+      await logActivity(payload.createdBy, 'quote_requested', `Buyer ${req.user.name || 'Unknown'} requested a new quote`);
+      await createNotification(payload.createdBy, req.user._id, 'quote_requested', `Buyer ${req.user.name || 'Unknown'} requested a new quote`, '/admin');
+    } else {
+      await logActivity(req.user._id, 'quote_created', `Admin created a new quote for buyer`);
+    }
+
     res.status(201).json(createdQuotation);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -83,6 +93,16 @@ const createPublicQuotation = async (req, res) => {
     };
 
     const createdQuotation = await quotationService.createQuotation(payload);
+    
+    await logActivity(catalogue.createdBy, 'quote_requested', `Buyer ${buyer.name} requested a new quote`);
+    await createNotification(
+      catalogue.createdBy,
+      buyer.id,
+      'quote_requested',
+      `Buyer ${buyer.name} requested a new quote via your catalog`,
+      '/admin'
+    );
+
     res.status(201).json(createdQuotation);
   } catch (error) {
     console.error('[createPublicQuotation] Error:', error);
@@ -198,6 +218,14 @@ const updateQuotation = async (req, res) => {
     }
 
     const updatedQuotation = await quotationService.updateQuotation(req.params.id, req.body);
+    await logActivity(req.user._id, 'quote_updated', `Updated pricing on quotation`);
+    await createNotification(
+      quotationBuyerId(quotation),
+      req.user._id,
+      'quote_updated',
+      `Admin has updated pricing on your quotation`,
+      '/buyer/quotes'
+    );
     res.json(updatedQuotation);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -224,6 +252,14 @@ const updateQuotationStatus = async (req, res) => {
     }
 
     const updatedQuotation = await quotationService.updateQuotationStatus(req.params.id, status);
+    await logActivity(req.user._id, 'quote_status_updated', `Changed quotation status to ${status.replace(/_/g, ' ')}`);
+    await createNotification(
+      quotationBuyerId(quotation),
+      req.user._id,
+      'quote_status_updated',
+      `Admin has changed quotation status to ${status.replace(/_/g, ' ')}`,
+      '/buyer/quotes'
+    );
     res.json(updatedQuotation);
   } catch (error) {
     console.error('[updateQuotationStatus] Error:', error);
@@ -255,6 +291,14 @@ const confirmQuotation = async (req, res) => {
     }
 
     const updatedQuotation = await quotationService.updateQuotationStatus(req.params.id, 'confirmed_by_buyer');
+    await logActivity(quotation.createdBy, 'quote_confirmed', `Buyer confirmed quotation`);
+    await createNotification(
+      quotation.createdBy,
+      req.user._id,
+      'quote_confirmed',
+      `Buyer has confirmed a quotation`,
+      '/admin'
+    );
     res.json(updatedQuotation);
   } catch (error) {
     console.error('[confirmQuotation] Error:', error);
@@ -285,6 +329,14 @@ const rejectQuotation = async (req, res) => {
     }
 
     const updatedQuotation = await quotationService.updateQuotationStatus(req.params.id, 'rejected_by_buyer');
+    await logActivity(quotation.createdBy, 'quote_rejected', `Buyer rejected quotation`);
+    await createNotification(
+      quotation.createdBy,
+      req.user._id,
+      'quote_rejected',
+      `Buyer has rejected a quotation`,
+      '/admin'
+    );
     res.json(updatedQuotation);
   } catch (error) {
     console.error('[rejectQuotation] Error:', error);

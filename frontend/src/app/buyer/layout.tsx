@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { LogOut, ShoppingBag, FileText } from 'lucide-react';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function BuyerLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, checkAuth, logout } = useAuthStore();
@@ -55,9 +56,11 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
             <p className="text-sm font-bold text-gray-900">{user.name}</p>
             <p className="text-xs text-gray-500">{user.email}</p>
           </div>
+          <NotificationBell />
+          <div className="mx-1 w-px h-6 bg-gray-200" />
           <button 
             onClick={handleLogout}
-            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors leading-none flex items-center justify-center cursor-pointer"
           >
             <LogOut className="w-5 h-5" />
           </button>

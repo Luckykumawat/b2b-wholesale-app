@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import AdminSidebar from '@/components/AdminSidebar';
 import ProfilePanel from '@/components/ProfilePanel';
 import TaskHistoryPanel from '@/components/TaskHistoryPanel';
+import NotificationBell from '@/components/NotificationBell';
 import { CheckCircle2, User } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -51,6 +52,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <CheckCircle2 className="w-4 h-4 text-gray-500" />
               <span>Task History</span>
             </button>
+            <div className="mx-2 w-px h-6 bg-gray-200" />
+            <NotificationBell />
             <button
               onClick={() => setProfileOpen(true)}
               className="w-9 h-9 rounded-full bg-green-500 text-white flex items-center justify-center border-2 border-white shadow-sm ring-2 ring-transparent hover:ring-green-300 transition-all cursor-pointer"
