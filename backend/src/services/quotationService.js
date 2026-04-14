@@ -158,10 +158,29 @@ const updateQuotation = async (id, payload) => {
   return getQuotationById(id);
 };
 
+/** Map app/UI statuses to values commonly allowed by Postgres CHECK constraints on quotations.status */
+const normalizeStatusForDb = (status) => {
+  if (status === 'approved_by_admin') return 'approved';
+  if (status === 'rejected_by_admin') return 'rejected';
+  return status;
+};
+
 const updateQuotationStatus = async (id, status) => {
-  const { data, error } = await supabase.from('quotations').update({ status }).eq('id', id).select().single();
+  const dbStatus = normalizeStatusForDb(status);
+  const { data, error } = await supabase
+    .from('quotations')
+    .update({ status: dbStatus })
+    .eq('id', id)
+    .select('id');
+
   if (error) throw error;
-  return mapQuotation(data);
+  if (!data || data.length === 0) {
+    const err = new Error('Quotation not found or could not be updated');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return getQuotationById(id);
 };
 
 const deleteQuotation = async (id) => {

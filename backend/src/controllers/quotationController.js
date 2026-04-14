@@ -2,6 +2,28 @@ const quotationService = require('../services/quotationService');
 const userService = require('../services/userService');
 const PDFDocument = require('pdfkit');
 
+const quotationBuyerId = (quotation) =>
+  quotation?.buyer?._id ?? quotation?.buyer?.id ?? quotation?.buyer;
+
+const assertAdminOrSuperCanAccessQuotation = async (req, quotation) => {
+  if (req.user.role === 'superadmin') return;
+  if (req.user.role !== 'admin') {
+    const e = new Error('Not authorized');
+    e.statusCode = 403;
+    throw e;
+  }
+  const assignedBuyers = await userService.getBuyersByAdmin(req.user._id);
+  const buyerIds = assignedBuyers.map((b) => b.id);
+  const isCreator = String(quotation.createdBy) === String(req.user._id);
+  const bid = quotationBuyerId(quotation);
+  const isAssignedBuyer = bid && buyerIds.includes(String(bid));
+  if (!isCreator && !isAssignedBuyer) {
+    const e = new Error('Not authorized to update or change status of this quotation');
+    e.statusCode = 403;
+    throw e;
+  }
+};
+
 // @desc    Create new quotation
 // @route   POST /api/quotations
 // @access  Private (Buyer or Admin)
@@ -112,15 +134,11 @@ const generatePDF = async (req, res) => {
     }
 
     // Data Isolation Check
-    if (req.user.role === 'admin') {
-      const assignedBuyers = await userService.getBuyersByAdmin(req.user._id);
-      const buyerIds = assignedBuyers.map(b => b.id);
-      
-      const isCreator = String(quotation.createdBy) === String(req.user._id);
-      const isAssignedBuyer = quotation.buyer && buyerIds.includes(String(quotation.buyer));
-      
-      if (!isCreator && !isAssignedBuyer) {
-        return res.status(403).json({ message: 'Not authorized to access this quotation' });
+    if (req.user.role === 'admin' || req.user.role === 'superadmin') {
+      try {
+        await assertAdminOrSuperCanAccessQuotation(req, quotation);
+      } catch (e) {
+        return res.status(e.statusCode || 403).json({ message: e.message });
       }
     }
 
@@ -173,17 +191,10 @@ const updateQuotation = async (req, res) => {
     const quotation = await quotationService.getQuotationById(req.params.id);
     if (!quotation) return res.status(404).json({ message: 'Quotation not found' });
 
-    // Data Isolation Check
-    if (req.user.role === 'admin') {
-      const assignedBuyers = await userService.getBuyersByAdmin(req.user._id);
-      const buyerIds = assignedBuyers.map(b => b.id);
-      
-      const isCreator = String(quotation.createdBy) === String(req.user._id);
-      const isAssignedBuyer = quotation.buyer && buyerIds.includes(String(quotation.buyer.id || quotation.buyer));
-      
-      if (!isCreator && !isAssignedBuyer) {
-        return res.status(403).json({ message: 'Not authorized to update or change status of this quotation' });
-      }
+    try {
+      await assertAdminOrSuperCanAccessQuotation(req, quotation);
+    } catch (e) {
+      return res.status(e.statusCode || 403).json({ message: e.message });
     }
 
     const updatedQuotation = await quotationService.updateQuotation(req.params.id, req.body);
@@ -199,34 +210,25 @@ const updateQuotation = async (req, res) => {
 const updateQuotationStatus = async (req, res) => {
   try {
     const { status } = req.body;
+    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Not authorized to change quotation status' });
+    }
+
     const quotation = await quotationService.getQuotationById(req.params.id);
     if (!quotation) return res.status(404).json({ message: 'Quotation not found' });
 
-    // Data Isolation Check
-    if (req.user.role === 'admin') {
-      const assignedBuyers = await userService.getBuyersByAdmin(req.user._id);
-      const buyerIds = assignedBuyers.map(b => b.id);
-      
-      const isCreator = String(quotation.createdBy) === String(req.user._id);
-      const isAssignedBuyer = quotation.buyer && buyerIds.includes(String(quotation.buyer.id || quotation.buyer));
-      
-      console.log('[updateQuotationStatus] Admin Auth Check:', {
-        quotationId: req.params.id,
-        isCreator,
-        isAssignedBuyer,
-        statusToSet: status
-      });
-
-      if (!isCreator && !isAssignedBuyer) {
-        return res.status(403).json({ message: 'Not authorized to update or change status of this quotation' });
-      }
+    try {
+      await assertAdminOrSuperCanAccessQuotation(req, quotation);
+    } catch (e) {
+      return res.status(e.statusCode || 403).json({ message: e.message });
     }
 
     const updatedQuotation = await quotationService.updateQuotationStatus(req.params.id, status);
     res.json(updatedQuotation);
   } catch (error) {
     console.error('[updateQuotationStatus] Error:', error);
-    res.status(500).json({ message: error.message });
+    const code = error.statusCode || 500;
+    res.status(code).json({ message: error.message });
   }
 };
 
