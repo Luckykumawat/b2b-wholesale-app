@@ -12,6 +12,14 @@ app.get('/', (req, res) => {
   res.send('B2B Wholesale API is running...');
 });
 
+// ✅ this new route
+app.get('/api', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "API is working properly 🚀"
+  });
+});
+
 // Import Routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
