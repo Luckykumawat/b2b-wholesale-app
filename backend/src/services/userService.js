@@ -1,7 +1,7 @@
 const supabase = require('../config/supabase');
 
 const USER_SELECT =
-  'id,name,email,password,role,phone,company_name,company_details,custom_pricing_tier,assigned_admin,created_at';
+  'id,name,email,password,role,phone,company_name,state,district,country,company_details,custom_pricing_tier,assigned_admin,status,plan,plan_start_date,created_at';
 
 const mapUser = (row) => {
   if (!row) return null;
@@ -34,9 +34,30 @@ const sanitizeUser = (user) => {
   return safeUser;
 };
 
+const normalizeEmail = (email = '') => String(email).trim().toLowerCase();
+
 const getByEmail = async (email) => {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
   console.log('Using Supabase for user operations. USER_SELECT:', USER_SELECT);
-  const { data, error } = await supabase.from('users').select(USER_SELECT).eq('email', email).maybeSingle();
+  const { data, error } = await supabase
+    .from('users')
+    .select(USER_SELECT)
+    .eq('email', normalizedEmail)
+    .maybeSingle();
+
+  if (!data && !error) {
+    const { data: ciData, error: ciError } = await supabase
+      .from('users')
+      .select(USER_SELECT)
+      .ilike('email', normalizedEmail)
+      .limit(1)
+      .maybeSingle();
+    if (ciError) throw ciError;
+    return mapUser(ciData);
+  }
+
   if (error) throw error;
   return mapUser(data);
 };
@@ -51,16 +72,20 @@ const getById = async (id) => {
 const createUser = async (payload) => {
   const dbPayload = {
     name: payload.name,
-    email: payload.email,
+    email: normalizeEmail(payload.email),
     password: payload.password,
     role: payload.role,
     phone: payload.phone || null,
     company_name: payload.companyName || null,
+    state: payload.state || null,
+    district: payload.district || null,
+    country: payload.country || null,
     company_details: payload.companyDetails || null,
     custom_pricing_tier: payload.customPricingTier ?? 1,
     assigned_admin: payload.assignedAdmin || null,
-    // status: payload.status || 'active', // Missing in Supabase table
-    // plan: payload.plan || 'free', // Missing in Supabase table
+    status: payload.status || 'active',
+    plan: payload.plan || 'free',
+    plan_start_date: payload.planStartDate || new Date(),
   };
 
   console.log('Using Supabase for user operations');
@@ -82,7 +107,7 @@ const updateUser = async (id, payload) => {
   console.log('Using Supabase for user operations');
   const updates = {};
   if (payload.name !== undefined) updates.name = payload.name;
-  if (payload.email !== undefined) updates.email = payload.email;
+  if (payload.email !== undefined) updates.email = normalizeEmail(payload.email);
   if (payload.password !== undefined) updates.password = payload.password;
   if (payload.phone !== undefined) updates.phone = payload.phone;
   if (payload.companyName !== undefined) updates.company_name = payload.companyName;
@@ -120,10 +145,9 @@ const listAdmins = async (filters = {}) => {
   if (filters.email) query = query.ilike('email', `%${filters.email}%`);
   if (filters.phone) query = query.ilike('phone', `%${filters.phone}%`);
   if (filters.companyName) query = query.ilike('company_name', `%${filters.companyName}%`);
-  // These columns are missing in Supabase:
-  // if (filters.state) query = query.ilike('state', `%${filters.state}%`);
-  // if (filters.district) query = query.ilike('district', `%${filters.district}%`);
-  // if (filters.country) query = query.ilike('country', `%${filters.country}%`);
+  if (filters.state) query = query.ilike('state', `%${filters.state}%`);
+  if (filters.district) query = query.ilike('district', `%${filters.district}%`);
+  if (filters.country) query = query.ilike('country', `%${filters.country}%`);
 
   const { data, error } = await query;
   if (error) throw error;

@@ -6,10 +6,13 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
+const normalizeEmail = (email = '') => String(email).trim().toLowerCase();
+
 const registerUser = async (req, res) => {
   const { name, email, password, phone, plan } = req.body;
+  const normalizedEmail = normalizeEmail(email);
   try {
-    const userExists = await userService.getByEmail(email);
+    const userExists = await userService.getByEmail(normalizedEmail);
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -20,7 +23,7 @@ const registerUser = async (req, res) => {
     // For testing purposes, we default to 'admin' so the user can test the admin flow immediately
     const user = await userService.createUser({
       name,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       phone,
       role: 'admin',
@@ -47,8 +50,9 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
+  const normalizedEmail = normalizeEmail(email);
   try {
-    const user = await userService.getByEmail(email);
+    const user = await userService.getByEmail(normalizedEmail);
     
     if (user && (await bcrypt.compare(password, user.password))) {
       if (user.status === 'suspended') {
