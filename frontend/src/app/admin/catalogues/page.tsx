@@ -213,21 +213,41 @@ export default function CataloguesPage() {
   const copyLink = (token: string) => {
     const link = `${window.location.origin}/shared-catalog/${token}`;
     navigator.clipboard.writeText(link);
+    api.post('/activity', {
+      action: 'catalogue_share',
+      details: `Copied catalogue link: ${token}`,
+      meta: { token },
+    }).catch(() => {});
     alert('Catalogue link copied to clipboard!');
   };
 
   const exportExcel = (cat: Catalogue) => {
     setDownloadDropdownOpen(null);
+    api.post('/activity', {
+      action: 'file_download',
+      details: `Downloaded catalogue Excel: ${cat.name}`,
+      meta: { type: 'excel', catalogueId: cat._id },
+    }).catch(() => {});
     generateExcelCatalog(cat.products, cat.name);
   };
 
   const exportPPT = (cat: Catalogue) => {
     setDownloadDropdownOpen(null);
+    api.post('/activity', {
+      action: 'file_download',
+      details: `Downloaded catalogue PPT: ${cat.name}`,
+      meta: { type: 'ppt', catalogueId: cat._id },
+    }).catch(() => {});
     generatePPTCatalog(cat.products, cat.name, cat.buyerCompany);
   };
 
   const exportPDF = (cat: Catalogue) => {
     setDownloadDropdownOpen(null);
+    api.post('/activity', {
+      action: 'file_download',
+      details: `Downloaded catalogue PDF: ${cat.name}`,
+      meta: { type: 'pdf', catalogueId: cat._id },
+    }).catch(() => {});
     generatePDFCatalog(cat.products, cat.name, cat.buyerCompany);
   };
 

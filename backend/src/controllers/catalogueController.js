@@ -205,6 +205,12 @@ const updateCatalogue = async (req, res) => {
     }
 
     const updatedCatalogue = await catalogueService.updateCatalogue(req.params.id, req.body);
+    await logActivity(
+      req.user._id,
+      'catalogue_update',
+      `Updated catalogue: ${updatedCatalogue.name}`,
+      { catalogueId: updatedCatalogue._id }
+    );
     res.json(updatedCatalogue);
   } catch (error) {
     res.status(500).json({ message: error.message });

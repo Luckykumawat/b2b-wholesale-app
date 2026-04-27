@@ -1,14 +1,30 @@
-const ActivityLog = require('../models/ActivityLog');
+const supabase = require('../config/supabase');
+
+const mapActivityLog = (row) => ({
+  _id: row.id,
+  id: row.id,
+  adminId: row.admin_id,
+  action: row.action,
+  details: row.details || '',
+  meta: row.meta || {},
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
 
 // @desc    Get activity logs for the logged-in admin
 // @route   GET /api/activity
 // @access  Private/Admin
 const getActivityLogs = async (req, res) => {
   try {
-    const logs = await ActivityLog.find({ adminId: req.user._id })
-      .sort({ createdAt: -1 })
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .select('*')
+      .eq('admin_id', req.user._id)
+      .order('created_at', { ascending: false })
       .limit(200);
-    res.json(logs);
+
+    if (error) throw error;
+    res.json((data || []).map(mapActivityLog));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -20,13 +36,21 @@ const getActivityLogs = async (req, res) => {
 const createActivityLog = async (req, res) => {
   try {
     const { action, details, meta } = req.body;
-    const log = await ActivityLog.create({
-      adminId: req.user._id,
-      action,
-      details: details || '',
-      meta: meta || {},
-    });
-    res.status(201).json(log);
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .insert([
+        {
+          admin_id: req.user._id,
+          action,
+          details: details || '',
+          meta: meta || {},
+        },
+      ])
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(mapActivityLog(data));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -35,7 +59,15 @@ const createActivityLog = async (req, res) => {
 // Helper: log an action server-side (called directly from other controllers)
 const logActivity = async (adminId, action, details = '', meta = {}) => {
   try {
-    await ActivityLog.create({ adminId, action, details, meta });
+    const { error } = await supabase.from('activity_logs').insert([
+      {
+        admin_id: adminId,
+        action,
+        details,
+        meta,
+      },
+    ]);
+    if (error) throw error;
   } catch (err) {
     console.error('ActivityLog error:', err.message);
   }

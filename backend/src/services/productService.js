@@ -175,6 +175,20 @@ const updateProduct = async (id, payload) => {
 };
 
 const deleteProduct = async (id) => {
+  // Remove dependent rows first to avoid FK violations
+  // (e.g. quotation_items.product_id -> products.id, catalogue_products.product_id -> products.id)
+  const { error: quotationItemsError } = await supabase
+    .from('quotation_items')
+    .delete()
+    .eq('product_id', id);
+  if (quotationItemsError) throw quotationItemsError;
+
+  const { error: catalogueProductsError } = await supabase
+    .from('catalogue_products')
+    .delete()
+    .eq('product_id', id);
+  if (catalogueProductsError) throw catalogueProductsError;
+
   const { error } = await supabase.from('products').delete().eq('id', id);
   if (error) throw error;
   return true;
@@ -246,10 +260,35 @@ const bulkInsert = async (products) => {
 };
 
 const bulkDelete = async (ids, adminId = null) => {
-  let query = supabase.from('products').delete().in('id', ids);
-  if (adminId) query = query.eq('created_by', adminId);
-  
-  const { data, error } = await query.select();
+  // Resolve the exact set of products the caller is actually allowed to delete
+  // (important for admin-scoped bulk deletion)
+  let allowedIdsQuery = supabase.from('products').select('id').in('id', ids);
+  if (adminId) allowedIdsQuery = allowedIdsQuery.eq('created_by', adminId);
+
+  const { data: allowedRows, error: allowedRowsError } = await allowedIdsQuery;
+  if (allowedRowsError) throw allowedRowsError;
+
+  const allowedIds = (allowedRows || []).map((row) => row.id);
+  if (allowedIds.length === 0) return 0;
+
+  // Remove dependent rows first for allowed products
+  const { error: quotationItemsError } = await supabase
+    .from('quotation_items')
+    .delete()
+    .in('product_id', allowedIds);
+  if (quotationItemsError) throw quotationItemsError;
+
+  const { error: catalogueProductsError } = await supabase
+    .from('catalogue_products')
+    .delete()
+    .in('product_id', allowedIds);
+  if (catalogueProductsError) throw catalogueProductsError;
+
+  const { data, error } = await supabase
+    .from('products')
+    .delete()
+    .in('id', allowedIds)
+    .select();
   if (error) throw error;
   return data ? data.length : 0;
 };

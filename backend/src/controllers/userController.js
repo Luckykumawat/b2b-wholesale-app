@@ -74,6 +74,13 @@ const updateBuyer = async (req, res) => {
       }
 
       const updatedUser = await userService.updateUser(req.params.id, updates);
+      const changedFields = Object.keys(req.body || {}).filter((k) => k !== 'password');
+      await logActivity(
+        req.user._id,
+        'buyer_update',
+        `Updated buyer: ${updatedUser.name}${changedFields.length ? ` (fields: ${changedFields.join(', ')})` : ''}`,
+        { buyerId: updatedUser._id, updatedFields: changedFields }
+      );
       res.json({
         _id: updatedUser._id,
         name: updatedUser.name,

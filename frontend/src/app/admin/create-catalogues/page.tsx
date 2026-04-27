@@ -99,22 +99,42 @@ export default function CreateCatalogues() {
 
   const exportExcel = () => {
     if (!generatedCatalogue) return;
+    api.post('/activity', {
+      action: 'file_download',
+      details: `Downloaded catalogue Excel: ${catalogueName}`,
+      meta: { type: 'excel', catalogueId: generatedCatalogue?._id },
+    }).catch(() => {});
     generateExcelCatalog(selectedProducts, catalogueName);
   };
 
   const exportPPT = () => {
     if (!generatedCatalogue) return;
+    api.post('/activity', {
+      action: 'file_download',
+      details: `Downloaded catalogue PPT: ${catalogueName}`,
+      meta: { type: 'ppt', catalogueId: generatedCatalogue?._id },
+    }).catch(() => {});
     generatePPTCatalog(selectedProducts, catalogueName, buyerCompany);
   };
 
   const exportPDF = () => {
     if (!generatedCatalogue) return;
+    api.post('/activity', {
+      action: 'file_download',
+      details: `Downloaded catalogue PDF: ${catalogueName}`,
+      meta: { type: 'pdf', catalogueId: generatedCatalogue?._id },
+    }).catch(() => {});
     generatePDFCatalog(selectedProducts, catalogueName, buyerCompany);
   };
 
   const copyLink = () => {
     const link = `${window.location.origin}/shared-catalog/${generatedCatalogue?.linkToken}`;
     navigator.clipboard.writeText(link);
+    api.post('/activity', {
+      action: 'catalogue_share',
+      details: `Copied catalogue link: ${generatedCatalogue?.linkToken}`,
+      meta: { catalogueId: generatedCatalogue?._id, token: generatedCatalogue?.linkToken },
+    }).catch(() => {});
     alert('Link copied to clipboard!');
   };
 

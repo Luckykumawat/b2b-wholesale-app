@@ -16,6 +16,8 @@ import * as XLSX from 'xlsx';
 import { generateExcelCatalog, generatePPTCatalog, generatePDFCatalog } from '@/lib/exportUtils';
 import { generateLabelHTML } from '@/lib/labelUtils';
 
+type ParsedCSVRecord = Record<string, unknown>;
+
 // ─── CSV Column Schema ───────────────────────────────────────────────────────
 const CSV_HEADERS = [
   'Product Name', 'Product ID', 'Variant ID', 'Category', 'Sub Category',
@@ -298,7 +300,12 @@ export default function AdminProducts() {
       setSelectedIds([]);
       setIsDeleteModalOpen(false);
       fetchProducts();
-    } catch { alert('Failed to delete some products.'); }
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Failed to delete products.';
+      alert(message);
+    }
     finally { setDeletingBulk(false); }
   };
   const handleBulkChangeCategory = async () => {
@@ -348,13 +355,18 @@ export default function AdminProducts() {
     const csv = Papa.unparse(getExportData());
     triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `products_${Date.now()}.csv`);
   };
-  const exportExcel = () => {
+  const exportExcel = async () => {
     setExportDropdownOpen(false);
-    generateExcelCatalog(getExportData().map(p => ({
-      _id: String(p.SKU), sku: String(p.SKU), name: String(p.Name), category: String(p.Category),
-      collectionName: String(p.Collection), basePrice: Number(p.Selling_Price),
-      material: String(p.Material), images: []
-    })), 'Products_Export');
+    try {
+      await generateExcelCatalog(getExportData().map(p => ({
+        _id: String(p.SKU), sku: String(p.SKU), name: String(p.Name), category: String(p.Category),
+        collectionName: String(p.Collection), basePrice: Number(p.Selling_Price),
+        material: String(p.Material), images: []
+      })), 'Products_Export');
+    } catch (err) {
+      console.error('Excel export failed:', err);
+      alert('Failed to export Excel. Please try again.');
+    }
   };
   const exportPDF = () => {
     setExportDropdownOpen(false);
@@ -364,13 +376,18 @@ export default function AdminProducts() {
       material: String(p.Material), images: []
     })), 'Products_Export');
   };
-  const exportPPT = () => {
+  const exportPPT = async () => {
     setExportDropdownOpen(false);
-    generatePPTCatalog(getExportData().map(p => ({
-      _id: String(p.SKU), sku: String(p.SKU), name: String(p.Name), category: String(p.Category),
-      collectionName: String(p.Collection), basePrice: Number(p.Selling_Price),
-      material: String(p.Material), images: []
-    })), 'Products_Export');
+    try {
+      await generatePPTCatalog(getExportData().map(p => ({
+        _id: String(p.SKU), sku: String(p.SKU), name: String(p.Name), category: String(p.Category),
+        collectionName: String(p.Collection), basePrice: Number(p.Selling_Price),
+        material: String(p.Material), images: []
+      })), 'Products_Export');
+    } catch (err) {
+      console.error('PPT export failed:', err);
+      alert('Failed to export PPT. Please try again.');
+    }
   };
   const downloadTemplate = () => {
     setExportDropdownOpen(false);
@@ -382,6 +399,15 @@ export default function AdminProducts() {
     const a = document.createElement('a');
     a.href = url; a.download = filename; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const pickFirstValue = (...values: unknown[]): string => {
+    for (const value of values) {
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        return String(value);
+      }
+    }
+    return '';
   };
 
   // ─── Import Logic ───────────────────────────────────────────────────────────
@@ -400,52 +426,52 @@ export default function AdminProducts() {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
-        complete: (result) => {
-          const rows: ParsedRow[] = result.data.map((r: any) => validateRow({
-            name: r['Product Name'] || r.Name || r.name || '',
-            sku: r['Product ID'] || r.SKU || r.sku || '',
-            variantId: r['Variant ID'] || r.variantId || '',
-            category: r.Category || r.category || '',
-            subCategory: r['Sub Category'] || r.Sub_Category || r.subCategory || '',
-            productTag: r['Product Tag'] || r.productTag || r.Tags || r.tags || '',
-            collectionName: r['Collection Name'] || r.Collection || r.collectionName || '',
-            description: r.Description || r.description || '',
-            sellingPrice: r['Selling Price'] || r.Selling_Price || r.sellingPrice || '',
-            sellingPrice_Currency: r['Selling Price_Currency'] || r.sellingPrice_Currency || 'USD',
-            sellingPrice_Unit: r['Selling Price_Unit'] || r.sellingPrice_Unit || '',
-            productCost: r['Product Cost'] || r.productCost || '',
-            productCost_Currency: r['Product Cost_Currency'] || r.productCost_Currency || 'USD',
-            productCost_Unit: r['Product Cost_Unit'] || r.productCost_Unit || '',
-            vendorPrice: r['Price from Vendor'] || r.vendorPrice || '',
-            vendorPrice_Currency: r['Price from Vendor_Currency'] || r.vendorPrice_Currency || 'USD',
-            vendorPrice_Unit: r['Price from Vendor_Unit'] || r.vendorPrice_Unit || '',
-            stock: r.Stock || r.stock || '',
-            moq: r.MOQ || r.moq || 1,
-            samplingTime: r['Sampling Time'] || r.samplingTime || '',
-            productionTime: r['Production Time'] || r.productionTime || '',
-            material: r.Material || r.material || '',
-            metalFinish: r['Metal Finish'] || r.metalFinish || '',
-            woodFinish: r['Wood Finish'] || r.woodFinish || '',
-            color: r.Color || r.color || '',
-            sizeCM: r['Size (CM)'] || r.sizeCM || '',
-            cbm: r.CBM || r.cbm || '',
-            ft20: r["20'ft"] || r.ft20 || '',
-            ft40HC: r["Loadability (40'ft HC)"] || r.ft40HC || '',
-            ft40GP: r["40'ft GP"] || r.ft40GP || '',
-            exclusiveFor: r['Exclusive For'] || r.exclusiveFor || '',
-            assembledKD: r['Assembled/KD'] || r.assembledKD || '',
-            vendorName: r['Vendor Name'] || r.vendorName || '',
-            productionTechnique: r['Production Technique'] || r.productionTechnique || '',
-            remarks: r.Remarks || r.remarks || '',
-            variationHinge: r.Variation_hinge || r.variationHinge || '',
-            searchKeywords: r['Search keywords'] || r.searchKeywords || '',
-            theme: r.Theme || r.theme || '',
-            season: r.Season || r.season || '',
-            images: r['Image URL'] || r.Image_URLs || r.images || '',
+        complete: (result: { data: ParsedCSVRecord[] }) => {
+          const rows: ParsedRow[] = result.data.map((r: ParsedCSVRecord) => validateRow({
+            name: pickFirstValue(r['Product Name'], r.Name, r.name),
+            sku: pickFirstValue(r['Product ID'], r.SKU, r.sku),
+            variantId: pickFirstValue(r['Variant ID'], r.variantId),
+            category: pickFirstValue(r.Category, r.category),
+            subCategory: pickFirstValue(r['Sub Category'], r.Sub_Category, r.subCategory),
+            productTag: pickFirstValue(r['Product Tag'], r.productTag, r.Tags, r.tags),
+            collectionName: pickFirstValue(r['Collection Name'], r.Collection, r.collectionName),
+            description: pickFirstValue(r.Description, r.description),
+            sellingPrice: pickFirstValue(r['Selling Price'], r.Selling_Price, r.sellingPrice),
+            sellingPrice_Currency: pickFirstValue(r['Selling Price_Currency'], r.sellingPrice_Currency) || 'USD',
+            sellingPrice_Unit: pickFirstValue(r['Selling Price_Unit'], r.sellingPrice_Unit),
+            productCost: pickFirstValue(r['Product Cost'], r.productCost),
+            productCost_Currency: pickFirstValue(r['Product Cost_Currency'], r.productCost_Currency) || 'USD',
+            productCost_Unit: pickFirstValue(r['Product Cost_Unit'], r.productCost_Unit),
+            vendorPrice: pickFirstValue(r['Price from Vendor'], r.vendorPrice),
+            vendorPrice_Currency: pickFirstValue(r['Price from Vendor_Currency'], r.vendorPrice_Currency) || 'USD',
+            vendorPrice_Unit: pickFirstValue(r['Price from Vendor_Unit'], r.vendorPrice_Unit),
+            stock: pickFirstValue(r.Stock, r.stock),
+            moq: pickFirstValue(r.MOQ, r.moq) || 1,
+            samplingTime: pickFirstValue(r['Sampling Time'], r.samplingTime),
+            productionTime: pickFirstValue(r['Production Time'], r.productionTime),
+            material: pickFirstValue(r.Material, r.material),
+            metalFinish: pickFirstValue(r['Metal Finish'], r.metalFinish),
+            woodFinish: pickFirstValue(r['Wood Finish'], r.woodFinish),
+            color: pickFirstValue(r.Color, r.color),
+            sizeCM: pickFirstValue(r['Size (CM)'], r.sizeCM),
+            cbm: pickFirstValue(r.CBM, r.cbm),
+            ft20: pickFirstValue(r["20'ft"], r.ft20),
+            ft40HC: pickFirstValue(r["Loadability (40'ft HC)"], r.ft40HC),
+            ft40GP: pickFirstValue(r["40'ft GP"], r.ft40GP),
+            exclusiveFor: pickFirstValue(r['Exclusive For'], r.exclusiveFor),
+            assembledKD: pickFirstValue(r['Assembled/KD'], r.assembledKD),
+            vendorName: pickFirstValue(r['Vendor Name'], r.vendorName),
+            productionTechnique: pickFirstValue(r['Production Technique'], r.productionTechnique),
+            remarks: pickFirstValue(r.Remarks, r.remarks),
+            variationHinge: pickFirstValue(r.Variation_hinge, r.variationHinge),
+            searchKeywords: pickFirstValue(r['Search keywords'], r.searchKeywords),
+            theme: pickFirstValue(r.Theme, r.theme),
+            season: pickFirstValue(r.Season, r.season),
+            images: pickFirstValue(r['Image URL'], r.Image_URLs, r.images),
           }));
           setParsedRows(rows);
         },
-        error: (err) => alert('CSV parse error: ' + err.message),
+        error: (err: { message: string }) => alert('CSV parse error: ' + err.message),
       });
     } else if (ext === 'xlsx' || ext === 'xls') {
       const reader = new FileReader();

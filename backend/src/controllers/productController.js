@@ -1,6 +1,30 @@
 const productService = require('../services/productService');
 const { logActivity } = require('./activityController');
 
+const toFieldLabel = (field) => {
+  const map = {
+    sku: 'SKU',
+    subCategory: 'sub category',
+    productTag: 'product tag',
+    sellingPrice: 'selling price',
+    basePrice: 'selling price',
+    collectionName: 'collection name',
+    searchKeywords: 'search keywords',
+    productCost: 'product cost',
+    vendorPrice: 'vendor price',
+    sizeCM: 'size (CM)',
+    ft20: "20'ft",
+    ft40HC: "40'ft HC",
+    ft40GP: "40'ft GP",
+    assembledKD: 'assembled/KD',
+    productionTechnique: 'production technique',
+    productionTime: 'production time',
+    samplingTime: 'sampling time',
+    variationHinge: 'variation hinge',
+  };
+  return map[field] || field.replace(/([A-Z])/g, ' $1').toLowerCase();
+};
+
 // @desc    Get all products
 // @route   GET /api/products
 // @access  Private (Admin + Buyer)
@@ -168,20 +192,27 @@ const updateProduct = async (req, res) => {
 
     const { images, remainingImages, dimensions, tags, ...otherFields } = req.body;
     const updates = { ...otherFields };
+    const changedFields = new Set();
+    Object.keys(otherFields || {}).forEach((field) => {
+      changedFields.add(toFieldLabel(field));
+    });
     
     // Map basePrice to sellingPrice
     if (otherFields.basePrice !== undefined) {
       updates.sellingPrice = Number(otherFields.basePrice);
+      changedFields.add('selling price');
     }
     
     // Handle dimensions
     if (dimensions) {
       updates.dimensions = typeof dimensions === 'string' ? JSON.parse(dimensions) : dimensions;
+      changedFields.add('dimensions');
     }
     
     // Handle tags
     if (tags) {
       updates.tags = typeof tags === 'string' ? JSON.parse(tags) : tags;
+      changedFields.add('tags');
     }
 
     // Handle images
@@ -192,18 +223,22 @@ const updateProduct = async (req, res) => {
       if (Array.isArray(parsedImages)) {
         finalImages = parsedImages.filter(img => img && typeof img === 'string' && img.trim() !== '');
       }
+      changedFields.add('images');
     }
 
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map(file => req.protocol + '://' + req.get('host') + '/' + file.path.replace(/\\/g, '/'));
       finalImages = [...finalImages, ...newImages];
+      changedFields.add('images');
     }
     updates.images = finalImages.filter(img => img && img.trim() !== '');
 
     const updatedProduct = await productService.updateProduct(req.params.id, updates);
 
-    await logActivity(req.user._id, 'product_update', `Updated product: ${updatedProduct.name}`, { 
-      productId: updatedProduct._id
+    await logActivity(req.user._id, 'product_update', `Updated product: ${updatedProduct.name}${changedFields.size ? ` (fields: ${Array.from(changedFields).join(', ')})` : ''}`, {
+      productId: updatedProduct._id,
+      updatedFields: Array.from(changedFields),
+      changedFieldsText: Array.from(changedFields).join(', ')
     });
 
     res.json(updatedProduct);

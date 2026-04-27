@@ -1,5 +1,10 @@
 const orderService = require('../services/orderService');
 const quotationService = require('../services/quotationService');
+const { logActivity } = require('./activityController');
+const { createNotification } = require('./notificationController');
+
+const extractBuyerId = (orderOrQuotation) =>
+  orderOrQuotation?.buyer?._id || orderOrQuotation?.buyer?.id || orderOrQuotation?.buyer_id || orderOrQuotation?.buyer;
 
 // @desc    Convert quote to order
 // @route   POST /api/orders
@@ -28,6 +33,35 @@ const createOrder = async (req, res) => {
     };
 
     const createdOrder = await orderService.createOrder(orderPayload);
+
+    const buyerId = extractBuyerId(quotation);
+    const actorId = req.user._id || req.user.id;
+
+    await logActivity(
+      orderPayload.createdBy,
+      'order_create',
+      `Created order from quotation ${quotation.id || quotation._id}`,
+      { orderId: createdOrder._id, quotationId: quotation.id || quotation._id }
+    );
+
+    // Notify buyer (if admin created the order), or notify admin (if buyer created it)
+    if (req.user.role === 'admin' && buyerId) {
+      await createNotification(
+        buyerId,
+        actorId,
+        'order_created',
+        `Your order has been created from quotation ${String(quotation.id || quotation._id).slice(-6)}`,
+        '/buyer/quotes'
+      );
+    } else if (req.user.role === 'buyer' && quotation.createdBy) {
+      await createNotification(
+        quotation.createdBy,
+        actorId,
+        'order_created',
+        `Buyer ${req.user.name || 'Buyer'} has placed an order`,
+        '/admin/quotations'
+      );
+    }
     
     // Update quote status
     await quotationService.updateQuotationStatus(quotationId, 'accepted');
@@ -75,6 +109,27 @@ const updateOrderStatus = async (req, res) => {
     }
 
     const updatedOrder = await orderService.updateOrderStatus(req.params.id, req.body.status || order.status);
+
+    const actorId = req.user._id || req.user.id;
+    const nextStatus = req.body.status || order.status;
+    const buyerId = extractBuyerId(order);
+
+    await logActivity(
+      userId,
+      'order_status_updated',
+      `Updated order ${order._id || order.id} status to ${nextStatus}`,
+      { orderId: order._id || order.id, status: nextStatus }
+    );
+
+    if (buyerId) {
+      await createNotification(
+        buyerId,
+        actorId,
+        'order_status_updated',
+        `Your order status has been updated to ${String(nextStatus).replace(/_/g, ' ')}`,
+        '/buyer/quotes'
+      );
+    }
 
     res.json(updatedOrder);
   } catch (error) {

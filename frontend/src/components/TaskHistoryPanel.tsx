@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Package, Trash2, FolderOpen, FolderMinus, Share2, UserPlus, Download, Tag, RefreshCw, Upload } from 'lucide-react';
+import { X, Package, Trash2, FolderOpen, FolderMinus, Share2, UserPlus, Download, Tag, RefreshCw, Upload, ShoppingCart, FileCheck } from 'lucide-react';
 import api from '@/lib/axios';
 
 interface ActivityLog {
@@ -24,9 +24,13 @@ const ACTION_CONFIG: Record<string, { label: string; icon: React.ElementType; co
   product_bulk_delete: { label: 'Bulk Delete Products', icon: Trash2,      color: '#DC2626', bg: '#FEF2F2' },
   product_bulk_import: { label: 'Products Imported',    icon: Upload,      color: '#7C3AED', bg: '#F5F3FF' },
   catalogue_create:    { label: 'Catalogue Created',    icon: FolderOpen,  color: '#D97706', bg: '#FFFBEB' },
+  catalogue_update:    { label: 'Catalogue Updated',    icon: RefreshCw,   color: '#2563EB', bg: '#EFF6FF' },
   catalogue_delete:    { label: 'Catalogue Deleted',    icon: FolderMinus, color: '#DC2626', bg: '#FEF2F2' },
   catalogue_share:     { label: 'Catalogue Shared',     icon: Share2,      color: '#0891B2', bg: '#ECFEFF' },
   buyer_create:        { label: 'Buyer Created',        icon: UserPlus,    color: '#059669', bg: '#ECFDF5' },
+  buyer_update:        { label: 'Buyer Updated',        icon: RefreshCw,   color: '#2563EB', bg: '#EFF6FF' },
+  order_create:        { label: 'Order Created',        icon: ShoppingCart,color: '#0891B2', bg: '#ECFEFF' },
+  order_status_updated:{ label: 'Order Status Updated', icon: FileCheck,   color: '#7C3AED', bg: '#F5F3FF' },
   file_download:       { label: 'File Downloaded',      icon: Download,    color: '#7C3AED', bg: '#F5F3FF' },
   label_create:        { label: 'Label Created',        icon: Tag,         color: '#D97706', bg: '#FFFBEB' },
   label_download:      { label: 'Label Downloaded',     icon: Download,    color: '#D97706', bg: '#FFFBEB' },
@@ -77,6 +81,12 @@ export default function TaskHistoryPanel({ isOpen, onClose, refreshKey }: TaskHi
       .then(({ data }) => setLogs(data))
       .catch(console.error)
       .finally(() => setLoading(false));
+
+    const interval = setInterval(() => {
+      api.get('/activity').then(({ data }) => setLogs(data)).catch(console.error);
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, [isOpen, refreshKey]);
 
   const grouped = groupByDate(logs);

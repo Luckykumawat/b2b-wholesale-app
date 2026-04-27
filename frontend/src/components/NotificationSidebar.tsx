@@ -50,6 +50,9 @@ export default function NotificationSidebar({ isOpen, onClose, refreshKey }: Not
   useEffect(() => {
     if (isOpen) {
       fetchNotifications();
+
+      const interval = setInterval(fetchNotifications, 5000);
+      return () => clearInterval(interval);
     }
   }, [isOpen, refreshKey]);
 

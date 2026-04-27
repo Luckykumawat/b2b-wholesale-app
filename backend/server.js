@@ -1,13 +1,11 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const app = require('./src/app');
-const connectDB = require('./src/config/db');
-
-// Connect to MongoDB
-connectDB();
 
 const PORT = process.env.PORT || 5000;
 
+console.log('Using Supabase (MongoDB removed)');
+
 app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
