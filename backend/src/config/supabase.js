@@ -35,12 +35,14 @@ const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
 // Get environment variables
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
+const supabaseServiceKey = (process.env.SUPABASE_SERVICE_KEY || '').trim();
+const jwtSecret = (process.env.JWT_SECRET || '').trim();
 
 // Debug logs (safe)
 console.log("SUPABASE URL:", supabaseUrl);
-console.log("SUPABASE KEY:", supabaseServiceKey ? "EXISTS" : "MISSING");
+console.log("SUPABASE KEY EXISTS:", !!supabaseServiceKey);
+console.log("JWT SECRET EXISTS:", !!jwtSecret);
 
 // Validate env
 if (!supabaseUrl || !supabaseServiceKey) {

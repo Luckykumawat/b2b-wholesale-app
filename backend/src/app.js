@@ -60,10 +60,7 @@ app.get('/api/test-supabase', async (req, res) => {
       .select('*')
       .limit(1);
 
-    if (error) {
-      console.error("SUPABASE ERROR:", error);
-      return res.status(500).json({ error: error.message });
-    }
+    if (error) throw error;
 
     res.json({
       success: true,
@@ -72,10 +69,8 @@ app.get('/api/test-supabase', async (req, res) => {
     });
 
   } catch (err) {
-    console.error("SUPABASE FETCH FAILED:", err);
-    res.status(500).json({
-      error: err.message || "Unknown error",
-    });
+    console.error("SUPABASE ERROR:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 

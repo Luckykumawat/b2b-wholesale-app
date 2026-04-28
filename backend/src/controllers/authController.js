@@ -51,8 +51,13 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
   const normalizedEmail = normalizeEmail(email);
+
+  console.log('[auth/login] Incoming email:', email);
+  console.log('[auth/login] Normalized email:', normalizedEmail);
+
   try {
     const user = await userService.getByEmail(normalizedEmail);
+    console.log('[auth/login] User fetch result:', user ? { id: user._id, email: user.email, status: user.status, role: user.role } : null);
     
     if (user && (await bcrypt.compare(password, user.password))) {
       if (user.status === 'suspended') {
@@ -71,8 +76,9 @@ const loginUser = async (req, res) => {
     } else {
       res.status(401).json({ message: 'Invalid email or password' });
     }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    console.error('LOGIN ERROR:', err);
+    res.status(500).json({ message: err.message });
   }
 };
 

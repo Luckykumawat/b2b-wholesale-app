@@ -41,11 +41,24 @@ const getByEmail = async (email) => {
   if (!normalizedEmail) return null;
 
   console.log('Using Supabase for user operations. USER_SELECT:', USER_SELECT);
+  console.log('[userService/getByEmail] normalizedEmail:', normalizedEmail);
+
   const { data, error } = await supabase
     .from('users')
     .select(USER_SELECT)
     .eq('email', normalizedEmail)
     .maybeSingle();
+
+  console.log('[userService/getByEmail] eq(email) response:', {
+    hasData: !!data,
+    dataEmail: data?.email,
+    error: error ? {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    } : null,
+  });
 
   if (!data && !error) {
     const { data: ciData, error: ciError } = await supabase
@@ -54,6 +67,18 @@ const getByEmail = async (email) => {
       .ilike('email', normalizedEmail)
       .limit(1)
       .maybeSingle();
+
+    console.log('[userService/getByEmail] ilike(email) fallback response:', {
+      hasData: !!ciData,
+      dataEmail: ciData?.email,
+      error: ciError ? {
+        message: ciError.message,
+        details: ciError.details,
+        hint: ciError.hint,
+        code: ciError.code,
+      } : null,
+    });
+
     if (ciError) throw ciError;
     return mapUser(ciData);
   }
