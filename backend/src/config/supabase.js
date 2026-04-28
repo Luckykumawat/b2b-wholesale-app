@@ -27,4 +27,7 @@ const supabase = hasSupabaseEnv
       },
     };
 
+console.log("SUPABASE URL:", process.env.SUPABASE_URL);
+console.log("SUPABASE KEY:", process.env.SUPABASE_SERVICE_KEY ? "EXISTS" : "MISSING");
+
 module.exports = supabase;

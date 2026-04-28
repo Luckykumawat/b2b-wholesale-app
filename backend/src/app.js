@@ -51,4 +51,32 @@ app.use('/api/notifications', notificationRoutes);
 // Configure static path for local image uploads
 app.use('/uploads', express.static('uploads'));
 
+app.get('/api/test-supabase', async (req, res) => {
+  try {
+    const supabase = require('./config/supabase');
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .limit(1);
+
+    if (error) {
+      console.error("SUPABASE ERROR:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({
+      success: true,
+      message: "Supabase connected successfully",
+      data
+    });
+
+  } catch (err) {
+    console.error("SUPABASE FETCH FAILED:", err);
+    res.status(500).json({
+      error: err.message || "Unknown error",
+    });
+  }
+});
+
 module.exports = app;
