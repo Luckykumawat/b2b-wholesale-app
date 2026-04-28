@@ -20,6 +20,11 @@ app.get('/api', (req, res) => {
   });
 });
 
+app.post('/api/test-login', (req, res) => {
+  console.log('Test login hit:', req.body);
+  res.json({ success: true });
+});
+
 // Import Routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
