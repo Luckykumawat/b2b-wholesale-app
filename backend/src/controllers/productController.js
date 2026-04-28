@@ -132,7 +132,10 @@ const createProduct = async (req, res) => {
     let images = [];
     
     if (req.files && req.files.length > 0) {
-      images = req.files.map(file => req.protocol + '://' + req.get('host') + '/' + file.path.replace(/\\/g, '/'));
+      images = req.files.map((file) => {
+        const fileName = file.filename || file.path?.split(/[/\\]/).pop();
+        return `${req.protocol}://${req.get('host')}/uploads/${fileName}`;
+      });
     }
 
     if (req.user && req.user.role === 'admin') {
@@ -227,7 +230,10 @@ const updateProduct = async (req, res) => {
     }
 
     if (req.files && req.files.length > 0) {
-      const newImages = req.files.map(file => req.protocol + '://' + req.get('host') + '/' + file.path.replace(/\\/g, '/'));
+      const newImages = req.files.map((file) => {
+        const fileName = file.filename || file.path?.split(/[/\\]/).pop();
+        return `${req.protocol}://${req.get('host')}/uploads/${fileName}`;
+      });
       finalImages = [...finalImages, ...newImages];
       changedFields.add('images');
     }
