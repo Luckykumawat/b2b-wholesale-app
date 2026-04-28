@@ -20,6 +20,9 @@ export async function urlToBase64(url: string): Promise<string> {
   if (!url) return '';
   try {
     const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Invalid response while fetching image: ${response.status}`);
+    }
     const blob = await response.blob();
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
