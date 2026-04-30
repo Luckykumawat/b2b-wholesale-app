@@ -35,7 +35,7 @@ export default function AdminSidebar() {
             <div className="w-8 h-8 bg-green-600 flex items-center justify-center rounded-sm">
                <div className="w-4 h-4 bg-yellow-400 rotate-45"></div>
             </div>
-            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Sourcewiz</span>
+            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Golanji</span>
          </div>
       </div>
 
