@@ -133,6 +133,9 @@ const createProduct = async (req, res) => {
     
     if (req.files && req.files.length > 0) {
       images = req.files.map((file) => {
+        if (file.path && (file.path.startsWith('http://') || file.path.startsWith('https://'))) {
+          return file.path;
+        }
         const fileName = file.filename || file.path?.split(/[/\\]/).pop();
         return `${req.protocol}://${req.get('host')}/uploads/${fileName}`;
       });
@@ -231,6 +234,9 @@ const updateProduct = async (req, res) => {
 
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map((file) => {
+        if (file.path && (file.path.startsWith('http://') || file.path.startsWith('https://'))) {
+          return file.path;
+        }
         const fileName = file.filename || file.path?.split(/[/\\]/).pop();
         return `${req.protocol}://${req.get('host')}/uploads/${fileName}`;
       });

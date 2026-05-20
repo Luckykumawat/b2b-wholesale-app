@@ -14,7 +14,7 @@ const createOrder = async (req, res) => {
     console.log("Using Supabase for order operations");
     const { quotationId, shippingAddress } = req.body;
     
-    // Use quotationService instead of Mongoose Model
+    // Use quotationService to fetch quotation details from Supabase
     const quotation = await quotationService.getQuotationById(quotationId);
 
     if (!quotation) {

@@ -54,7 +54,7 @@ export const generateLabelHTML = (products: any[]) => {
   chunked.forEach(chunk => {
     html += `
       <div class="page">
-        <div class="page-header">Download Sourcewiz Mobile app to scan QR code</div>
+        <div class="page-header">Download Golanji Mobile app to scan QR code</div>
         <div class="labels-wrapper">
     `;
 
@@ -94,7 +94,7 @@ export const generateLabelHTML = (products: any[]) => {
             </table>
             
             <div class="footer">
-              powered by <strong>Sourcewiz</strong>
+              powered by <strong>Golanji</strong>
             </div>
           </div>
       `;
